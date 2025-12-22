@@ -509,9 +509,8 @@ othello/
    - Multiple difficulty levels
 
 2. **UI Improvements**
-   - Graphical interface (using a crate like `ratatui` or `ggez`)
-   - Animation for piece flips
-   - Colorized terminal output
+   - Graphical interface using crates `ggez` and `keyframe`
+   - Animation for piece flips (using crate `keyframe`)
    - Move history/replay
 
 3. **Features**
