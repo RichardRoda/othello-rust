@@ -6,6 +6,7 @@ pub mod player;
 pub mod human_player;
 pub mod ai_player;
 pub mod display;
+pub mod graphics;
 
 // Re-export commonly used types
 pub use board::{Board, Cell, Position};

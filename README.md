@@ -5,12 +5,20 @@ A console-based implementation of the classic Othello (Reversi) game written in 
 ## Features
 
 - Full Othello game implementation with proper rules
+- **Two interface options:**
+  - **Console version** - Enhanced terminal UI with colors and Unicode symbols
+  - **Graphical version** - Full GUI with animations (requires Rust 1.81+)
 - Enhanced console-based user interface with:
   - **Colorized terminal output** - Beautiful colors for pieces, scores, and indicators
   - **Visual piece symbols** - Uses ○ (white) and ● (black) circles instead of letters
   - **Valid move highlighting** - Green dots (•) show where you can play
   - **Enhanced board borders** - Unicode box-drawing characters for a polished look
   - **Color-coded scores** - Easy-to-read score display with colored symbols
+- Graphical interface features:
+  - **Smooth animations** - Piece flips animated using keyframe easing functions
+  - **Mouse input** - Click to place pieces
+  - **Visual feedback** - Valid moves highlighted on the board
+  - **Modern UI** - Clean, colorful interface with score display
 - Support for human vs human gameplay
 - Modular, extensible architecture
 - Error handling with Rust's Result types
@@ -27,6 +35,8 @@ cargo build --release
 
 ## Running
 
+### Console Version (Default)
+
 ```bash
 cargo run
 ```
@@ -36,6 +46,21 @@ Or run the release version:
 ```bash
 cargo run --release
 ```
+
+### Graphical Version (GUI)
+
+**Note:** The GUI version requires Rust 1.81 or later. To use it, enable the `gui` feature:
+
+```bash
+cargo run --bin othello-gui --features gui --release
+```
+
+The graphical version provides:
+- Beautiful visual interface with colored board
+- Smooth piece flip animations using keyframe easing
+- Mouse-based move selection
+- Visual indicators for valid moves
+- Score and game state display
 
 ## How to Play
 

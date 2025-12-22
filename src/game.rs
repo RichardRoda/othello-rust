@@ -78,6 +78,11 @@ impl Game {
 
     /// Attempt to make a move at the given position
     pub fn make_move(&mut self, position: Position) -> Result<(), GameError> {
+        self.make_move_with_flipped(position).map(|_| ())
+    }
+
+    /// Attempt to make a move and return the flipped positions (useful for animations)
+    pub fn make_move_with_flipped(&mut self, position: Position) -> Result<Vec<Position>, GameError> {
         if self.game_state != GameState::Playing {
             return Err(GameError::GameOver);
         }
@@ -87,8 +92,8 @@ impl Game {
             return Err(GameError::InvalidMove);
         }
 
-        // Apply the move (this will flip pieces)
-        rules::apply_move(&mut self.board, position, self.current_player)?;
+        // Apply the move (this will flip pieces and return flipped positions)
+        let flipped = rules::apply_move(&mut self.board, position, self.current_player)?;
 
         // Switch to the next player
         self.current_player = self.current_player.opposite();
@@ -106,7 +111,7 @@ impl Game {
             }
         }
 
-        Ok(())
+        Ok(flipped)
     }
 
     /// Skip the current player's turn (called when no valid moves)
