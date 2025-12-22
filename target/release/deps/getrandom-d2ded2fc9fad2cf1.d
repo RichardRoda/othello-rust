@@ -1,0 +1,11 @@
+C:\Users\Richard\Documents\projects\cursor\othello\target\release\deps\libgetrandom-d2ded2fc9fad2cf1.rmeta: C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src/lib.rs C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src\error.rs C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src\util.rs C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src\error_impls.rs C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src\windows.rs
+
+C:\Users\Richard\Documents\projects\cursor\othello\target\release\deps\libgetrandom-d2ded2fc9fad2cf1.rlib: C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src/lib.rs C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src\error.rs C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src\util.rs C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src\error_impls.rs C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src\windows.rs
+
+C:\Users\Richard\Documents\projects\cursor\othello\target\release\deps\getrandom-d2ded2fc9fad2cf1.d: C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src/lib.rs C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src\error.rs C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src\util.rs C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src\error_impls.rs C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src\windows.rs
+
+C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src/lib.rs:
+C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src\error.rs:
+C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src\util.rs:
+C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src\error_impls.rs:
+C:\Users\Richard\.cargo\registry\src\index.crates.io-6f17d22bba15001f\getrandom-0.2.16\src\windows.rs:
