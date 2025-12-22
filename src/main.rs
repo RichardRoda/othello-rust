@@ -1,8 +1,13 @@
 use othello::{Game, HumanPlayer, PlayerTrait};
 
 fn main() {
-    println!("Welcome to Othello!");
-    println!("===================");
+    othello::display::clear_screen();
+    println!("╔════════════════════════════╗");
+    println!("║     Welcome to Othello!    ║");
+    println!("╚════════════════════════════╝");
+    println!();
+    println!("Press Enter to start...");
+    let _ = std::io::stdin().read_line(&mut String::new());
     
     let mut game = Game::new();
     let black_player = HumanPlayer::new("Player 1 (Black)");

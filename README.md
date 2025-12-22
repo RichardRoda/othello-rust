@@ -5,7 +5,12 @@ A console-based implementation of the classic Othello (Reversi) game written in 
 ## Features
 
 - Full Othello game implementation with proper rules
-- Console-based user interface
+- Enhanced console-based user interface with:
+  - **Colorized terminal output** - Beautiful colors for pieces, scores, and indicators
+  - **Visual piece symbols** - Uses ○ (white) and ● (black) circles instead of letters
+  - **Valid move highlighting** - Green dots (•) show where you can play
+  - **Enhanced board borders** - Unicode box-drawing characters for a polished look
+  - **Color-coded scores** - Easy-to-read score display with colored symbols
 - Support for human vs human gameplay
 - Modular, extensible architecture
 - Error handling with Rust's Result types
@@ -73,11 +78,26 @@ src/
 └── error.rs         # Error types
 ```
 
+## UI Features
+
+The game features an enhanced terminal interface:
+
+- **Colors**: Automatic color detection (disabled if `NO_COLOR` environment variable is set)
+- **Piece Display**: 
+  - `●` Black pieces (bright black/gray)
+  - `○` White pieces (bright white)
+  - `•` Valid moves (bright green)
+  - `·` Empty spaces (dim gray)
+- **Board Layout**: Clean borders with Unicode box-drawing characters
+- **Information Display**: Color-coded scores, current player, and valid moves
+
 ## Future Enhancements
 
 - AI with minimax algorithm
 - Alpha-beta pruning for better AI performance
-- Graphical interface
+- Graphical interface (ggez-based)
+- Animation for piece flips
+- Move history/replay
 - Save/load game state
 - Undo/redo functionality
 - Network multiplayer
