@@ -1,7 +1,7 @@
-use ggez::graphics::{self, Color, DrawMode, DrawParam, Mesh, Rect, Text, TextFragment};
+use ggez::graphics::{Canvas, Color, DrawMode, DrawParam, Mesh, Rect, Text, TextFragment};
 use ggez::{Context, GameResult};
 use keyframe::{ease, functions::EaseInOutCubic};
-use crate::board::{Board, Cell, Position};
+use crate::board::{Cell, Position};
 use crate::game::{Game, GameState, Player};
 
 /// Colors for the game
@@ -130,7 +130,7 @@ impl GraphicsState {
     }
 
     /// Update animation state
-    pub fn update(&mut self, ctx: &mut Context, game: &Game) -> GameResult {
+    pub fn update(&mut self, ctx: &mut Context, _game: &Game) -> GameResult {
         self.current_time = ctx.time.time_since_start().as_secs_f64();
         
         // Remove completed animations
@@ -173,19 +173,19 @@ impl GraphicsState {
 
     /// Render the entire game
     pub fn draw(&mut self, ctx: &mut Context, game: &Game) -> GameResult {
-        graphics::clear(ctx, graphics::Color::new(0.1, 0.1, 0.15, 1.0));
+        let mut canvas = Canvas::from_frame(ctx, Color::new(0.1, 0.1, 0.15, 1.0));
         
-        self.draw_board(ctx)?;
-        self.draw_pieces(ctx, game)?;
-        self.draw_valid_moves(ctx, game)?;
-        self.draw_ui(ctx, game)?;
+        self.draw_board(ctx, &mut canvas)?;
+        self.draw_pieces(ctx, &mut canvas, game)?;
+        self.draw_valid_moves(ctx, &mut canvas, game)?;
+        self.draw_ui(ctx, &mut canvas, game)?;
 
-        graphics::present(ctx)?;
+        canvas.finish(ctx)?;
         Ok(())
     }
 
     /// Draw the board grid
-    fn draw_board(&self, ctx: &mut Context) -> GameResult {
+    fn draw_board(&self, ctx: &mut Context, canvas: &mut Canvas) -> GameResult {
         let rect = Rect::new(
             self.board_offset_x,
             self.board_offset_y,
@@ -193,7 +193,7 @@ impl GraphicsState {
             self.board_size,
         );
         let mesh = Mesh::new_rectangle(ctx, DrawMode::fill(), rect, colors::BOARD_GREEN)?;
-        graphics::draw(ctx, &mesh, DrawParam::default())?;
+        canvas.draw(&mesh, DrawParam::default());
 
         // Draw grid lines
         let line_color = Color::new(0.0, 0.3, 0.0, 1.0);
@@ -205,7 +205,7 @@ impl GraphicsState {
                 [pos, self.board_offset_y + self.board_size],
             ];
             let v_line = Mesh::new_line(ctx, &points, 2.0, line_color)?;
-            graphics::draw(ctx, &v_line, DrawParam::default())?;
+            canvas.draw(&v_line, DrawParam::default());
 
             // Horizontal lines
             let h_pos = self.board_offset_y + pos - self.board_offset_x;
@@ -214,14 +214,14 @@ impl GraphicsState {
                 [self.board_offset_x + self.board_size, h_pos],
             ];
             let h_line = Mesh::new_line(ctx, &h_points, 2.0, line_color)?;
-            graphics::draw(ctx, &h_line, DrawParam::default())?;
+            canvas.draw(&h_line, DrawParam::default());
         }
 
         Ok(())
     }
 
     /// Draw game pieces
-    fn draw_pieces(&self, ctx: &mut Context, game: &Game) -> GameResult {
+    fn draw_pieces(&self, ctx: &mut Context, canvas: &mut Canvas, game: &Game) -> GameResult {
         let board = game.get_board();
         
         for row in 0..8 {
@@ -231,14 +231,14 @@ impl GraphicsState {
                     if cell != Cell::Empty {
                         // Check if this piece is animating
                         if let Some(anim) = self.flip_animations.iter().find(|a| a.position == pos) {
-                            self.draw_animating_piece(ctx, pos, anim, self.current_time)?;
+                            self.draw_animating_piece(ctx, canvas, pos, anim, self.current_time)?;
                         } else {
                             let player = match cell {
                                 Cell::Black => Player::Black,
                                 Cell::White => Player::White,
                                 _ => continue,
                             };
-                            self.draw_piece(ctx, pos, player)?;
+                            self.draw_piece(ctx, canvas, pos, player)?;
                         }
                     }
                 }
@@ -248,7 +248,7 @@ impl GraphicsState {
     }
 
     /// Draw a static piece
-    fn draw_piece(&self, ctx: &mut Context, pos: Position, player: Player) -> GameResult {
+    fn draw_piece(&self, ctx: &mut Context, canvas: &mut Canvas, pos: Position, player: Player) -> GameResult {
         let center_x = self.board_offset_x + (pos.col as f32 + 0.5) * self.cell_size;
         let center_y = self.board_offset_y + (pos.row as f32 + 0.5) * self.cell_size;
 
@@ -257,7 +257,7 @@ impl GraphicsState {
             Player::White => colors::WHITE_PIECE,
         };
 
-        let circle = graphics::Mesh::new_circle(
+        let circle = Mesh::new_circle(
             ctx,
             DrawMode::fill(),
             [center_x, center_y],
@@ -266,14 +266,14 @@ impl GraphicsState {
             color,
         )?;
 
-        graphics::draw(ctx, &circle, DrawParam::default())?;
+        canvas.draw(&circle, DrawParam::default());
 
         // Draw a border for contrast
         let border_color = match player {
             Player::Black => Color::new(0.3, 0.3, 0.3, 1.0),
             Player::White => Color::new(0.7, 0.7, 0.7, 1.0),
         };
-        let border = graphics::Mesh::new_circle(
+        let border = Mesh::new_circle(
             ctx,
             DrawMode::stroke(2.0),
             [center_x, center_y],
@@ -281,13 +281,13 @@ impl GraphicsState {
             0.1,
             border_color,
         )?;
-        graphics::draw(ctx, &border, DrawParam::default())?;
+        canvas.draw(&border, DrawParam::default());
 
         Ok(())
     }
 
     /// Draw an animating piece (flipping)
-    fn draw_animating_piece(&self, ctx: &mut Context, pos: Position, anim: &FlipAnimation, current_time: f64) -> GameResult {
+    fn draw_animating_piece(&self, ctx: &mut Context, canvas: &mut Canvas, pos: Position, anim: &FlipAnimation, current_time: f64) -> GameResult {
         let center_x = self.board_offset_x + (pos.col as f32 + 0.5) * self.cell_size;
         let center_y = self.board_offset_y + (pos.row as f32 + 0.5) * self.cell_size;
 
@@ -315,7 +315,7 @@ impl GraphicsState {
 
         let radius = self.piece_radius * scale;
         if radius > 0.1 {
-            let circle = graphics::Mesh::new_circle(
+            let circle = Mesh::new_circle(
                 ctx,
                 DrawMode::fill(),
                 [center_x, center_y],
@@ -323,21 +323,21 @@ impl GraphicsState {
                 0.1,
                 color,
             )?;
-            graphics::draw(ctx, &circle, DrawParam::default())?;
+            canvas.draw(&circle, DrawParam::default());
         }
 
         Ok(())
     }
 
     /// Draw valid move indicators
-    fn draw_valid_moves(&self, ctx: &mut Context, game: &Game) -> GameResult {
+    fn draw_valid_moves(&self, ctx: &mut Context, canvas: &mut Canvas, game: &Game) -> GameResult {
         let valid_moves = game.get_valid_moves();
         
         for pos in valid_moves {
             let center_x = self.board_offset_x + (pos.col as f32 + 0.5) * self.cell_size;
             let center_y = self.board_offset_y + (pos.row as f32 + 0.5) * self.cell_size;
 
-            let circle = graphics::Mesh::new_circle(
+            let circle = Mesh::new_circle(
                 ctx,
                 DrawMode::fill(),
                 [center_x, center_y],
@@ -345,14 +345,14 @@ impl GraphicsState {
                 0.1,
                 colors::VALID_MOVE,
             )?;
-            graphics::draw(ctx, &circle, DrawParam::default())?;
+            canvas.draw(&circle, DrawParam::default());
         }
 
         Ok(())
     }
 
     /// Draw UI elements (score, current player, etc.)
-    fn draw_ui(&self, ctx: &mut Context, game: &Game) -> GameResult {
+    fn draw_ui(&self, ctx: &mut Context, canvas: &mut Canvas, game: &Game) -> GameResult {
         let (black_score, white_score) = game.get_score();
         let screen_w = ctx.gfx.size().0;
         
@@ -360,21 +360,21 @@ impl GraphicsState {
         let score_text = Text::new(TextFragment {
             text: format!("Black: {}  White: {}", black_score, white_score),
             color: Some(colors::TEXT_COLOR),
-            font: Some(&graphics::Font::default()),
+            font: None,
             scale: Some(ggez::graphics::PxScale::from(24.0)),
         });
         let score_pos = [screen_w / 2.0 - 100.0, self.board_offset_y + self.board_size + 20.0];
-        graphics::draw(ctx, &score_text, DrawParam::default().dest(score_pos))?;
+        canvas.draw(&score_text, DrawParam::default().dest(score_pos));
 
         // Draw current player
         let player_text = Text::new(TextFragment {
             text: format!("Current: {}", game.current_player()),
             color: Some(colors::TEXT_COLOR),
-            font: Some(&graphics::Font::default()),
+            font: None,
             scale: Some(ggez::graphics::PxScale::from(20.0)),
         });
         let player_pos = [screen_w / 2.0 - 80.0, self.board_offset_y + self.board_size + 50.0];
-        graphics::draw(ctx, &player_text, DrawParam::default().dest(player_pos))?;
+        canvas.draw(&player_text, DrawParam::default().dest(player_pos));
 
         // Draw game over message
         if let GameState::GameOver { winner } = game.get_game_state() {
@@ -386,11 +386,11 @@ impl GraphicsState {
             let game_over_text = Text::new(TextFragment {
                 text: format!("GAME OVER - {}", message),
                 color: Some(Color::new(1.0, 0.8, 0.0, 1.0)),
-                font: Some(&graphics::Font::default()),
+                font: None,
                 scale: Some(ggez::graphics::PxScale::from(32.0)),
             });
             let game_over_pos = [screen_w / 2.0 - 150.0, 10.0];
-            graphics::draw(ctx, &game_over_text, DrawParam::default().dest(game_over_pos))?;
+            canvas.draw(&game_over_text, DrawParam::default().dest(game_over_pos));
         }
 
         Ok(())

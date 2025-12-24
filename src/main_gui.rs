@@ -1,8 +1,7 @@
-use ggez::event::{self, EventHandler, MouseButton};
+use ggez::event::{self, EventHandler};
 use ggez::graphics;
 use ggez::{Context, ContextBuilder, GameResult};
-use othello::{Game, Player};
-use crate::graphics::GraphicsState;
+use othello::{Game, Player, GraphicsState};
 
 /// Main game state for GUI version
 struct MainState {
@@ -50,15 +49,15 @@ impl EventHandler for MainState {
     fn mouse_button_down_event(
         &mut self,
         _ctx: &mut Context,
-        _button: MouseButton,
+        _button: ggez::input::mouse::MouseButton,
         x: f32,
         y: f32,
-    ) {
+    ) -> GameResult {
         // Only handle clicks if game is still playing
         if matches!(self.game.get_game_state(), othello::GameState::Playing) {
             // Check if animations are still running
             if self.graphics.has_animations() {
-                return; // Ignore clicks during animations
+                return Ok(()); // Ignore clicks during animations
             }
 
             if let Some(position) = self.graphics.screen_to_position(x, y) {
@@ -72,6 +71,7 @@ impl EventHandler for MainState {
                 }
             }
         }
+        Ok(())
     }
 }
 
@@ -86,6 +86,6 @@ pub fn main() -> GameResult {
     let state = MainState::new(&mut ctx)?;
     
     // Run the game
-    event::run(ctx, event_loop, state);
+    event::run(ctx, event_loop, state)
 }
 

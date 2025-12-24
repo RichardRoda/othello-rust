@@ -15,4 +15,5 @@ pub use game::{Game, GameState, Player};
 pub use player::PlayerTrait;
 pub use human_player::HumanPlayer;
 pub use ai_player::AIPlayer;
+pub use graphics::GraphicsState;
 
