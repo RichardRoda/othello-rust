@@ -1,5 +1,4 @@
 use ggez::event::{self, EventHandler};
-use ggez::graphics;
 use ggez::{Context, ContextBuilder, GameResult};
 use othello::{Game, Player, GraphicsState};
 

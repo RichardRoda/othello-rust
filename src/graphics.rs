@@ -15,20 +15,6 @@ mod colors {
         a: 1.0,
     };
     
-    pub const BOARD_LIGHT: Color = Color {
-        r: 0.2,
-        g: 0.7,
-        b: 0.2,
-        a: 1.0,
-    };
-    
-    pub const BOARD_DARK: Color = Color {
-        r: 0.0,
-        g: 0.4,
-        b: 0.0,
-        a: 1.0,
-    };
-
     pub const BLACK_PIECE: Color = Color {
         r: 0.1,
         g: 0.1,
