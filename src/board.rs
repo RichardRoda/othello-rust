@@ -39,7 +39,7 @@ impl std::fmt::Display for Cell {
 }
 
 /// Position on the board (0-indexed)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Position {
     pub row: usize,
     pub col: usize,

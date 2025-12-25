@@ -183,7 +183,8 @@ fn test_mcts_with_different_iteration_counts() {
 fn test_mcts_time_limit() {
     // Test that time limits work correctly
     let game = Game::new();
-    let mut player = MCTSPlayer::with_iterations("MCTS Time", 10000);
+    let mut player = MCTSPlayer::with_iterations("MCTS Time", 10000)
+        .with_parallel_threads(Some(1)); // Use sequential mode for predictable timing
     player.set_max_time_ms(Some(100)); // 100ms limit
     
     let start = std::time::Instant::now();
