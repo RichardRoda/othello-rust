@@ -1,4 +1,4 @@
-use othello::{Game, HumanPlayer, PlayerTrait};
+use othello::{Game, PlayerTrait, console_selection};
 
 fn main() {
     othello::display::clear_screen();
@@ -9,9 +9,11 @@ fn main() {
     println!("Press Enter to start...");
     let _ = std::io::stdin().read_line(&mut String::new());
     
+    // Get player configuration
+    let config = console_selection::get_player_config();
+    let (black_player, white_player) = config.create_players();
+    
     let mut game = Game::new();
-    let black_player = HumanPlayer::new("Player 1 (Black)");
-    let white_player = HumanPlayer::new("Player 2 (White)");
     
     // Main game loop
     loop {
@@ -19,9 +21,9 @@ fn main() {
         othello::display::render_game(&game);
         
         // Get the current player
-        let player = match game.current_player() {
-            othello::Player::Black => &black_player as &dyn PlayerTrait,
-            othello::Player::White => &white_player as &dyn PlayerTrait,
+        let player: &dyn PlayerTrait = match game.current_player() {
+            othello::Player::Black => black_player.as_ref(),
+            othello::Player::White => white_player.as_ref(),
         };
         
         // Check if current player has valid moves
