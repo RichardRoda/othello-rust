@@ -1,5 +1,6 @@
 use crate::game::Game;
 use crate::board::Position;
+use crate::board::Cell;
 
 /// Heuristics for evaluating Othello moves during MCTS simulation.
 ///
@@ -72,12 +73,12 @@ impl Heuristics {
     /// assert!(corner_score > center_score);
     /// ```
     pub fn evaluate_move(game: &Game, position: Position) -> f64 {
-        let corner_value = Self::corner_heuristic(position);
+        let corner_value = Self::corner_heuristic(game, position);
         let mobility_value = Self::mobility_heuristic(game, position);
         let stability_value = Self::stability_heuristic(position);
-        
+        let piece_count_value = Self::piece_count_heuristic(game, position);
         // Weighted combination
-        corner_value * 10.0 + mobility_value * 2.0 + stability_value * 1.0
+        return corner_value * 10.0 + mobility_value + stability_value * 2.0 + piece_count_value;
     }
     
     /// Corner heuristic: evaluates position based on corner proximity.
@@ -107,7 +108,7 @@ impl Heuristics {
     /// // Normal square gets neutral score
     /// assert_eq!(Heuristics::corner_heuristic(Position::new(3, 3)), 0.0);
     /// ```
-    pub fn corner_heuristic(position: Position) -> f64 {
+    pub fn corner_heuristic(game: &Game, position: Position) -> f64 {
         let corners = [
             Position::new(0, 0), Position::new(0, 7),
             Position::new(7, 0), Position::new(7, 7),
@@ -116,12 +117,24 @@ impl Heuristics {
         if corners.contains(&position) {
             1.0
         } else if Self::is_adjacent_to_corner(position) {
-            -0.5
+            if Self::is_adjacent_corner_mine(game, position) {
+                0.5
+            } else {
+                -0.5
+            }
         } else {
             0.0
         }
     }
     
+    pub fn is_adjacent_corner_mine(game: &Game, position: Position) -> bool {
+        let col = if position.col < 4 {0} else {7};
+        let row = if position.row < 4 {0} else {7};
+        let corner = Position::new(row, col);
+
+        return game.get_board().get_cell(corner) == Ok(Cell::from_player(game.current_player()));
+    }
+
     /// Check if position is adjacent to a corner
     /// Returns true for C-squares and X-squares (risky positions)
     fn is_adjacent_to_corner(position: Position) -> bool {
@@ -190,6 +203,18 @@ impl Heuristics {
             // Return normalized difference (range: -1.0 to 1.0)
             (my_moves as f64 - opponent_moves as f64) / (my_moves + opponent_moves) as f64
         }
+    }
+
+    pub fn piece_count_heuristic(game: &Game, position: Position) -> f64 {
+        let mut test_game = game.clone();
+        if test_game.make_move(position).is_err() {
+            return 0.0;
+        }
+        
+        let my_pieces = test_game.get_board().count_pieces(game.current_player());
+        let opponent_pieces = test_game.get_board().count_pieces(game.current_player().opposite());
+
+        return (my_pieces as f64 - opponent_pieces as f64) / (my_pieces + opponent_pieces) as f64;
     }
     
     /// Stability heuristic: evaluates position based on piece stability.
