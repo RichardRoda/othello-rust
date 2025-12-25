@@ -7,6 +7,59 @@ use rand::Rng;
 use rand::thread_rng;
 use std::time::Instant;
 
+/// A Monte Carlo Tree Search player for Othello.
+///
+/// MCTS builds a search tree by repeatedly performing four phases:
+/// 1. **Selection**: Traverse from root to leaf using UCB1 (Upper Confidence Bound)
+/// 2. **Expansion**: Add children to the selected leaf node
+/// 3. **Simulation**: Play a random/heuristic-guided game to completion
+/// 4. **Backpropagation**: Update statistics (visits and win rate) up the tree
+///
+/// After many iterations, the move from the most-visited child is selected (robust child).
+///
+/// # Examples
+///
+/// Basic usage with a preset difficulty:
+///
+/// ```rust
+/// use othello::mcts::MCTSPlayer;
+/// use othello::{Game, PlayerTrait};
+///
+/// let game = Game::new();
+/// let player = MCTSPlayer::medium();
+/// let move_opt = player.choose_move(&game);
+/// ```
+///
+/// Custom configuration with builder pattern:
+///
+/// ```rust
+/// use othello::mcts::MCTSPlayer;
+///
+/// let player = MCTSPlayer::with_iterations("Custom AI", 2000)
+///     .with_exploration(1.5)
+///     .with_time_limit_ms(2000)
+///     .with_heuristics(true);
+/// ```
+///
+/// Using difficulty presets:
+///
+/// ```rust
+/// use othello::mcts::MCTSPlayer;
+///
+/// let easy = MCTSPlayer::easy();     // 200 iterations
+/// let medium = MCTSPlayer::medium(); // 1000 iterations
+/// let hard = MCTSPlayer::hard();     // 3000 iterations
+/// let expert = MCTSPlayer::expert(); // 10000 iterations, 5s limit
+/// ```
+///
+/// # Performance
+///
+/// The number of iterations directly affects:
+/// - **Quality**: More iterations generally lead to better moves (but with diminishing returns)
+/// - **Speed**: Each iteration takes roughly 1-10ms depending on game state and heuristics
+///
+/// For real-time play, 500-2000 iterations is usually sufficient. For analysis or
+/// very strong play, 5000-10000+ iterations may be used.
 pub struct MCTSPlayer {
     name: String,
     iterations: usize,
@@ -16,12 +69,37 @@ pub struct MCTSPlayer {
 }
 
 impl MCTSPlayer {
-    /// Create a new MCTS player with default settings (1000 iterations)
+    /// Create a new MCTS player with default settings.
+    ///
+    /// Default settings:
+    /// - 1000 iterations per move
+    /// - Exploration constant: √2 ≈ 1.414
+    /// - No time limit
+    /// - Heuristics disabled
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::MCTSPlayer;
+    ///
+    /// let player = MCTSPlayer::new("My AI");
+    /// ```
     pub fn new(name: impl Into<String>) -> Self {
         Self::with_iterations(name, 1000)
     }
     
-    /// Create a new MCTS player with specified number of iterations
+    /// Create a new MCTS player with a specified number of iterations.
+    ///
+    /// `iterations` is the number of MCTS iterations to perform per move.
+    /// More iterations generally lead to better moves but take longer.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::MCTSPlayer;
+    ///
+    /// let player = MCTSPlayer::with_iterations("Fast AI", 500);
+    /// ```
     pub fn with_iterations(name: impl Into<String>, iterations: usize) -> Self {
         Self {
             name: name.into(),
@@ -32,56 +110,152 @@ impl MCTSPlayer {
         }
     }
     
-    /// Set the exploration constant (typically √2 ≈ 1.414)
+    /// Set the exploration constant for UCB1.
+    ///
+    /// The exploration constant balances exploitation (choosing good moves) vs
+    /// exploration (trying new moves). Higher values favor exploration.
+    ///
+    /// Typical values:
+    /// - √2 ≈ 1.414 (default, balanced)
+    /// - 1.0 - 1.5 (more exploitation, for strong play)
+    /// - 2.0+ (more exploration, for varied/uncertain positions)
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::MCTSPlayer;
+    ///
+    /// let mut player = MCTSPlayer::new("AI");
+    /// player.set_exploration_constant(2.0); // More exploration
+    /// ```
     pub fn set_exploration_constant(&mut self, c: f64) {
         self.exploration_constant = c;
     }
     
-    /// Set the maximum time limit in milliseconds
+    /// Set the maximum time limit per move in milliseconds.
+    ///
+    /// If `Some(ms)`, the search will stop after `ms` milliseconds even if
+    /// not all iterations are complete. If `None`, all iterations will run.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::MCTSPlayer;
+    ///
+    /// let mut player = MCTSPlayer::with_iterations("Fast AI", 10000);
+    /// player.set_max_time_ms(Some(2000)); // Stop after 2 seconds
+    /// ```
     pub fn set_max_time_ms(&mut self, ms: Option<u64>) {
         self.max_time_ms = ms;
     }
     
-    /// Set whether to use heuristics in simulation
+    /// Set whether to use heuristics during simulation.
+    ///
+    /// When enabled, moves during simulation are selected probabilistically based on
+    /// heuristic scores rather than uniformly randomly. This typically improves
+    /// simulation quality and can lead to better move selection.
+    ///
+    /// Heuristics evaluate moves based on:
+    /// - Corner positions (valuable)
+    /// - Mobility (maximizing future options)
+    /// - Stability (edge pieces are harder to flip)
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::MCTSPlayer;
+    ///
+    /// let mut player = MCTSPlayer::new("AI");
+    /// player.set_use_heuristics(true);
+    /// ```
     pub fn set_use_heuristics(&mut self, enable: bool) {
         self.use_heuristics = enable;
     }
     
-    /// Create an easy difficulty MCTS player
-    /// - 200 iterations
-    /// - Higher exploration (2.0) for more random play
-    /// - No heuristics
+    /// Create an easy difficulty MCTS player.
+    ///
+    /// Settings:
+    /// - 200 iterations (fast, ~200-500ms per move)
+    /// - Higher exploration (2.0) for more varied play
+    /// - No heuristics (pure random simulation)
+    ///
+    /// Suitable for quick games or less experienced players.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::MCTSPlayer;
+    ///
+    /// let player = MCTSPlayer::easy();
+    /// ```
     pub fn easy() -> Self {
         Self::with_iterations("MCTS (Easy)", 200)
             .with_exploration(2.0)
             .with_heuristics(false)
     }
     
-    /// Create a medium difficulty MCTS player
-    /// - 1000 iterations
+    /// Create a medium difficulty MCTS player.
+    ///
+    /// Settings:
+    /// - 1000 iterations (moderate speed, ~1-3s per move)
     /// - Standard exploration (√2 ≈ 1.414)
     /// - Heuristics enabled
+    ///
+    /// A good balance of speed and strength. Recommended for most games.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::MCTSPlayer;
+    ///
+    /// let player = MCTSPlayer::medium();
+    /// ```
     pub fn medium() -> Self {
         Self::with_iterations("MCTS (Medium)", 1000)
             .with_exploration(1.414)
             .with_heuristics(true)
     }
     
-    /// Create a hard difficulty MCTS player
-    /// - 3000 iterations
+    /// Create a hard difficulty MCTS player.
+    ///
+    /// Settings:
+    /// - 3000 iterations (slower, ~3-10s per move)
     /// - Standard exploration (√2 ≈ 1.414)
     /// - Heuristics enabled
+    ///
+    /// Strong play suitable for experienced players.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::MCTSPlayer;
+    ///
+    /// let player = MCTSPlayer::hard();
+    /// ```
     pub fn hard() -> Self {
         Self::with_iterations("MCTS (Hard)", 3000)
             .with_exploration(1.414)
             .with_heuristics(true)
     }
     
-    /// Create an expert difficulty MCTS player
-    /// - 10000 iterations
-    /// - Lower exploration (1.0) for more exploitation
+    /// Create an expert difficulty MCTS player.
+    ///
+    /// Settings:
+    /// - 10000 iterations (very slow, ~10-30s per move, capped at 5s)
+    /// - Lower exploration (1.0) for more focused exploitation
     /// - Heuristics enabled
-    /// - 5 second time limit
+    /// - 5 second time limit (may not complete all iterations)
+    ///
+    /// Very strong play for expert-level competition. Uses time limit to
+    /// prevent excessively long moves while allowing deep search when possible.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::MCTSPlayer;
+    ///
+    /// let player = MCTSPlayer::expert();
+    /// ```
     pub fn expert() -> Self {
         Self::with_iterations("MCTS (Expert)", 10000)
             .with_exploration(1.0)
@@ -89,19 +263,53 @@ impl MCTSPlayer {
             .with_time_limit_ms(5000)
     }
     
-    /// Builder method: set exploration constant and return self
+    /// Builder method: set exploration constant and return self.
+    ///
+    /// Allows method chaining for convenient configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::MCTSPlayer;
+    ///
+    /// let player = MCTSPlayer::new("AI")
+    ///     .with_exploration(1.5)
+    ///     .with_heuristics(true);
+    /// ```
     pub fn with_exploration(mut self, c: f64) -> Self {
         self.exploration_constant = c;
         self
     }
     
-    /// Builder method: set time limit and return self
+    /// Builder method: set time limit and return self.
+    ///
+    /// Allows method chaining for convenient configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::MCTSPlayer;
+    ///
+    /// let player = MCTSPlayer::with_iterations("AI", 5000)
+    ///     .with_time_limit_ms(3000); // Cap at 3 seconds
+    /// ```
     pub fn with_time_limit_ms(mut self, ms: u64) -> Self {
         self.max_time_ms = Some(ms);
         self
     }
     
-    /// Builder method: set heuristics usage and return self
+    /// Builder method: set heuristics usage and return self.
+    ///
+    /// Allows method chaining for convenient configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::MCTSPlayer;
+    ///
+    /// let player = MCTSPlayer::with_iterations("AI", 1000)
+    ///     .with_heuristics(true); // Enable heuristics
+    /// ```
     pub fn with_heuristics(mut self, enable: bool) -> Self {
         self.use_heuristics = enable;
         self
@@ -317,6 +525,25 @@ impl MCTSPlayer {
 }
 
 impl crate::player::PlayerTrait for MCTSPlayer {
+    /// Choose the best move using MCTS search.
+    ///
+    /// Performs the specified number of MCTS iterations (or until time limit)
+    /// and returns the move from the most-visited child node.
+    ///
+    /// Returns `None` if there are no valid moves available.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::MCTSPlayer;
+    /// use othello::{Game, PlayerTrait};
+    ///
+    /// let game = Game::new();
+    /// let player = MCTSPlayer::medium();
+    /// if let Some(position) = player.choose_move(&game) {
+    ///     println!("Best move: {:?}", position);
+    /// }
+    /// ```
     fn choose_move(&self, game: &Game) -> Option<Position> {
         let valid_moves = game.get_valid_moves();
         

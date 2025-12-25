@@ -20,6 +20,7 @@ An implementation of the classic Othello (Reversi) game written in Rust with a g
   - **Visual feedback** - Valid moves highlighted on the board
   - **Modern UI** - Clean, colorful interface with score display
 - Support for human vs human gameplay
+- **Monte Carlo Tree Search (MCTS) AI player** - Advanced AI with multiple difficulty levels
 - Modular, extensible architecture
 - Error handling with Rust's Result types
 
@@ -97,6 +98,84 @@ The graphical version provides:
 - Game ends when neither player can make a valid move
 - Player with more pieces wins
 
+## MCTS AI Player
+
+The game includes a sophisticated Monte Carlo Tree Search (MCTS) AI player with multiple difficulty levels.
+
+### Quick Start
+
+```rust
+use othello::{Game, PlayerTrait};
+use othello::MCTSPlayer;
+
+let game = Game::new();
+let player = MCTSPlayer::medium();  // Medium difficulty
+let move_opt = player.choose_move(&game);
+```
+
+### Difficulty Levels
+
+The MCTS player provides four preset difficulty levels:
+
+- **Easy** (`MCTSPlayer::easy()`) - 200 iterations, ~200-500ms per move
+  - Higher exploration for more varied play
+  - No heuristics (pure random simulation)
+  - Good for quick games or beginners
+
+- **Medium** (`MCTSPlayer::medium()`) - 1000 iterations, ~1-3s per move
+  - Balanced settings with heuristics enabled
+  - Recommended for most games
+
+- **Hard** (`MCTSPlayer::hard()`) - 3000 iterations, ~3-10s per move
+  - Strong play suitable for experienced players
+  - Heuristics enabled for better simulation quality
+
+- **Expert** (`MCTSPlayer::expert()`) - 10000 iterations, ~10-30s per move (capped at 5s)
+  - Very strong play for expert-level competition
+  - Lower exploration for focused exploitation
+  - Time limit prevents excessively long moves
+
+### Custom Configuration
+
+You can also create custom MCTS players with fine-tuned parameters:
+
+```rust
+use othello::MCTSPlayer;
+
+let player = MCTSPlayer::with_iterations("Custom AI", 2000)
+    .with_exploration(1.5)      // Exploration constant (default: √2 ≈ 1.414)
+    .with_time_limit_ms(3000)   // Maximum time per move
+    .with_heuristics(true);     // Enable heuristic-guided simulation
+```
+
+### How MCTS Works
+
+MCTS builds a search tree by repeatedly performing four phases:
+
+1. **Selection**: Traverse from root to leaf using UCB1 (Upper Confidence Bound)
+2. **Expansion**: Add children to the selected leaf node
+3. **Simulation**: Play a random/heuristic-guided game to completion
+4. **Backpropagation**: Update statistics (visits and win rate) up the tree
+
+After many iterations, the move from the most-visited child is selected. The algorithm balances exploration (trying new moves) with exploitation (choosing promising moves).
+
+### Heuristics
+
+When enabled, the MCTS player uses Othello-specific heuristics to improve simulation quality:
+
+- **Corner heuristic**: Prioritizes corner positions (very valuable) and avoids adjacent squares (risky)
+- **Mobility heuristic**: Prefers moves that maximize future move options
+- **Stability heuristic**: Favors edge pieces which are harder to flip
+
+### Performance Tips
+
+- **Iterations**: More iterations generally lead to better moves but take longer (diminishing returns after ~5000)
+- **Time limits**: Use `with_time_limit_ms()` to cap move time for responsive gameplay
+- **Heuristics**: Enable heuristics to improve simulation quality and move selection
+- **Exploration constant**: Lower values (1.0-1.2) favor exploitation, higher values (2.0+) favor exploration
+
+For library usage, see the [`mcts` module documentation](https://docs.rs/othello/latest/othello/mcts/index.html).
+
 ## Project Structure
 
 ```
@@ -110,7 +189,12 @@ src/
 ├── human_player.rs  # Human player implementation
 ├── ai_player.rs     # AI player implementation (random)
 ├── display.rs       # Console rendering
-└── error.rs         # Error types
+├── error.rs         # Error types
+└── mcts/            # Monte Carlo Tree Search AI
+    ├── mod.rs       # Module declarations
+    ├── node.rs      # MCTS tree node implementation
+    ├── player.rs    # MCTS player implementation
+    └── heuristics.rs # Move evaluation heuristics
 ```
 
 ## UI Features
@@ -128,10 +212,9 @@ The game features an enhanced terminal interface:
 
 ## Future Enhancements
 
-- AI with minimax algorithm
-- Alpha-beta pruning for better AI performance
-- Graphical interface (ggez-based)
-- Animation for piece flips
+- Alpha-beta pruning for alternative AI approach
+- Tree reuse between moves (advanced MCTS optimization)
+- Parallel MCTS (multi-threaded search)
 - Move history/replay
 - Save/load game state
 - Undo/redo functionality

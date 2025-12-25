@@ -1,7 +1,32 @@
 use crate::game::{Game, Player, GameState};
 use crate::board::Position;
 
-/// A node in the Monte Carlo Tree
+/// A node in the Monte Carlo Tree Search tree.
+///
+/// Each node represents a game state and stores:
+/// - Statistics: number of visits and accumulated value (win rate)
+/// - Game state: the board position at this node
+/// - Tree structure: parent-child relationships and move history
+///
+/// Nodes are created lazily during the expansion phase and updated during backpropagation.
+///
+/// # Examples
+///
+/// ```rust
+/// use othello::mcts::node::MCTSNode;
+/// use othello::Game;
+///
+/// let game = Game::new();
+/// let node = MCTSNode::new(game);
+///
+/// // Initially unexpanded
+/// assert!(!node.is_expanded());
+///
+/// // Expand to create children
+/// let mut node = node;
+/// node.expand();
+/// assert!(node.has_children());
+/// ```
 pub struct MCTSNode {
     /// Number of times this node has been visited
     visits: usize,
@@ -16,6 +41,8 @@ pub struct MCTSNode {
     move_from_parent: Option<Position>,
     
     /// Child nodes (one per valid move)
+    // Box is necessary for recursive data structure (clippy false positive)
+    #[allow(clippy::vec_box)]
     children: Vec<Box<MCTSNode>>,
     
     /// Whether children have been expanded
@@ -33,7 +60,25 @@ pub struct MCTSNode {
 }
 
 impl MCTSNode {
-    /// Create a new root node from a game state
+    /// Create a new root node from a game state.
+    ///
+    /// The node is initialized with:
+    /// - 0 visits and 0.0 value
+    /// - Not expanded (no children)
+    /// - Terminal status determined from game state
+    /// - Current player from game state
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::node::MCTSNode;
+    /// use othello::Game;
+    ///
+    /// let game = Game::new();
+    /// let node = MCTSNode::new(game);
+    /// assert_eq!(node.visits(), 0);
+    /// assert!(!node.is_expanded());
+    /// ```
     pub fn new(game_state: Game) -> Self {
         let current_player = game_state.current_player();
         let is_terminal = matches!(game_state.get_game_state(), GameState::GameOver { .. });
@@ -80,8 +125,29 @@ impl MCTSNode {
         self.move_from_parent
     }
     
-    /// Expand this node by creating children for all valid moves
-    /// Caches valid moves to avoid recalculating them later
+    /// Expand this node by creating children for all valid moves.
+    ///
+    /// Creates a child node for each valid move from the current game state.
+    /// Each child represents the game state after making that move.
+    ///
+    /// This operation caches valid moves to avoid recalculating them later,
+    /// improving performance during tree traversal.
+    ///
+    /// Does nothing if the node is already expanded or is terminal.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::node::MCTSNode;
+    /// use othello::Game;
+    ///
+    /// let game = Game::new();
+    /// let mut node = MCTSNode::new(game);
+    ///
+    /// node.expand();
+    /// assert!(node.is_expanded());
+    /// assert!(node.has_children());
+    /// ```
     pub fn expand(&mut self) {
         if self.is_terminal || self.is_expanded {
             return;
@@ -142,8 +208,37 @@ impl MCTSNode {
         !self.children.is_empty()
     }
     
-    /// Calculate UCB1 value for this node
-    /// `exploration_constant` is typically √2 ≈ 1.414
+    /// Calculate the UCB1 (Upper Confidence Bound) value for this node.
+    ///
+    /// UCB1 balances exploitation (choosing nodes with good win rates) and
+    /// exploration (trying less-visited nodes). The formula is:
+    ///
+    /// `UCB1 = (wins / visits) + C * sqrt(ln(parent_visits) / visits)`
+    ///
+    /// Where:
+    /// - First term is exploitation (average win rate)
+    /// - Second term is exploration (encourages trying less-visited nodes)
+    /// - C is the exploration constant (typically √2 ≈ 1.414)
+    ///
+    /// Returns `f64::INFINITY` for unvisited nodes to prioritize exploration.
+    ///
+    /// # Arguments
+    ///
+    /// * `exploration_constant` - The exploration parameter C (typically √2 ≈ 1.414)
+    /// * `parent_visits` - Number of visits to the parent node
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::node::MCTSNode;
+    /// use othello::Game;
+    ///
+    /// let game = Game::new();
+    /// let node = MCTSNode::new(game);
+    ///
+    /// // Unvisited node returns infinity
+    /// assert_eq!(node.ucb1_value(1.414, 100), f64::INFINITY);
+    /// ```
     pub fn ucb1_value(&self, exploration_constant: f64, parent_visits: usize) -> f64 {
         if self.visits == 0 {
             return f64::INFINITY; // Unvisited nodes get highest priority
@@ -159,7 +254,34 @@ impl MCTSNode {
         exploitation + exploration
     }
     
-    /// Select the best child according to UCB1
+    /// Select the best child according to UCB1.
+    ///
+    /// Returns the index of the child with the highest UCB1 value.
+    /// Unvisited children (with infinite UCB1) are prioritized.
+    ///
+    /// # Arguments
+    ///
+    /// * `exploration_constant` - The exploration parameter for UCB1
+    ///
+    /// # Panics
+    ///
+    /// Panics if the node has no children. Call `has_children()` first.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::node::MCTSNode;
+    /// use othello::Game;
+    ///
+    /// let game = Game::new();
+    /// let mut node = MCTSNode::new(game);
+    /// node.expand();
+    ///
+    /// if node.has_children() {
+    ///     let best_idx = node.select_child(1.414);
+    ///     assert!(best_idx < node.num_children());
+    /// }
+    /// ```
     pub fn select_child(&self, exploration_constant: f64) -> usize {
         let parent_visits = self.visits;
         
@@ -185,7 +307,27 @@ impl MCTSNode {
         self.children.get_mut(index).map(|boxed| boxed.as_mut())
     }
     
-    /// Get the best child by visits (robust child)
+    /// Get the best child by visit count (robust child).
+    ///
+    /// Returns the child that has been visited the most times. This is the
+    /// "robust child" strategy - the move that has been explored most thoroughly.
+    ///
+    /// Returns `None` if there are no children.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use othello::mcts::node::MCTSNode;
+    /// use othello::Game;
+    ///
+    /// let game = Game::new();
+    /// let mut node = MCTSNode::new(game);
+    /// node.expand();
+    ///
+    /// if let Some(best_child) = node.best_child_robust() {
+    ///     // Use the most-visited child for the final move
+    /// }
+    /// ```
     pub fn best_child_robust(&self) -> Option<&MCTSNode> {
         self.children.iter()
             .max_by_key(|child| child.visits)
