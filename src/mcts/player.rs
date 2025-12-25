@@ -1,7 +1,9 @@
 use crate::mcts::node::MCTSNode;
 use crate::game::{Game, Player, GameState};
+use crate::board::Position;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use std::time::Instant;
 
 pub struct MCTSPlayer {
     name: String,
@@ -12,6 +14,59 @@ pub struct MCTSPlayer {
 }
 
 impl MCTSPlayer {
+    /// Create a new MCTS player with default settings (1000 iterations)
+    pub fn new(name: impl Into<String>) -> Self {
+        Self::with_iterations(name, 1000)
+    }
+    
+    /// Create a new MCTS player with specified number of iterations
+    pub fn with_iterations(name: impl Into<String>, iterations: usize) -> Self {
+        Self {
+            name: name.into(),
+            iterations,
+            exploration_constant: 1.414, // √2
+            max_time_ms: None,
+            use_heuristics: false,
+        }
+    }
+    
+    /// Set the exploration constant (typically √2 ≈ 1.414)
+    pub fn set_exploration_constant(&mut self, c: f64) {
+        self.exploration_constant = c;
+    }
+    
+    /// Set the maximum time limit in milliseconds
+    pub fn set_max_time_ms(&mut self, ms: Option<u64>) {
+        self.max_time_ms = ms;
+    }
+    
+    /// Set whether to use heuristics in simulation
+    pub fn set_use_heuristics(&mut self, enable: bool) {
+        self.use_heuristics = enable;
+    }
+    
+    /// Perform MCTS search and return best move
+    fn mcts_search(&self, game: &Game) -> Option<Position> {
+        let mut root = MCTSNode::new(game.clone());
+        let root_player = game.current_player();
+        let start_time = Instant::now();
+        
+        for _iteration in 0..self.iterations {
+            // Check time limit
+            if let Some(max_ms) = self.max_time_ms {
+                if start_time.elapsed().as_millis() as u64 > max_ms {
+                    break;
+                }
+            }
+            
+            // Perform one MCTS iteration
+            self.mcts_iteration(&mut root, root_player);
+        }
+        
+        // Return move from most visited child (robust child)
+        root.best_child_robust()
+            .and_then(|child| child.move_from_parent())
+    }
     /// Perform selection phase: traverse from root to leaf (read-only to get path)
     /// Returns a path (vector of child indices) from root to the selected leaf node.
     /// The leaf node is either:
@@ -149,6 +204,28 @@ impl MCTSPlayer {
         
         // 5. Backpropagation: Update statistics along path
         Self::backpropagate(root, &path, result, root_player);
+    }
+}
+
+impl crate::player::PlayerTrait for MCTSPlayer {
+    fn choose_move(&self, game: &Game) -> Option<Position> {
+        let valid_moves = game.get_valid_moves();
+        
+        if valid_moves.is_empty() {
+            return None; // No valid moves
+        }
+        
+        // If only one move, return it immediately
+        if valid_moves.len() == 1 {
+            return Some(valid_moves[0]);
+        }
+        
+        // Perform MCTS search
+        self.mcts_search(game)
+    }
+    
+    fn get_name(&self) -> &str {
+        &self.name
     }
 }
 
