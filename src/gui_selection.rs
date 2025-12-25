@@ -171,7 +171,7 @@ impl SelectionScreen {
             font: None,
             scale: Some(ggez::graphics::PxScale::from(32.0)),
         });
-        canvas.draw(&white_label, DrawParam::default().dest([100.0, 400.0]));
+        canvas.draw(&white_label, DrawParam::default().dest([100.0, 600.0]));
         
         // Player type options
         for (i, player_type) in self.player_types.iter().enumerate() {
