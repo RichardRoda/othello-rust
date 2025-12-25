@@ -260,7 +260,7 @@ impl MCTSPlayer {
         Self::with_iterations("MCTS (Expert)", 10000)
             .with_exploration(1.0)
             .with_heuristics(true)
-            .with_time_limit_ms(5000)
+            .with_time_limit_ms(60000)
     }
     
     /// Builder method: set exploration constant and return self.

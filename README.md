@@ -1,4 +1,8 @@
-# Othello Game in Rust
+# Othello Game in Rust: A journey with Cursor
+
+I was able to implement this in less than a day in a language (Rust) that I have beginner
+level knowledge of.  The intent of this is to demonstrate what can be done with cursor
+in a few hours.
 
 An implementation of the classic Othello (Reversi) game written in Rust with a graphical interface.
 
@@ -41,13 +45,13 @@ cargo build --release
 The GUI version is now the default interface. Simply run:
 
 ```bash
-cargo run
+cargo run --bin othello
 ```
 
 Or run the release version:
 
 ```bash
-cargo run --release
+cargo run --bin othello --release
 ```
 
 **Note:** The GUI version requires Rust 1.81 or later. If you have an older Rust version, use the console version instead.
