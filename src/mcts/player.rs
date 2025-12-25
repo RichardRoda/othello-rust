@@ -105,8 +105,8 @@ impl MCTSPlayer {
             name: name.into(),
             iterations,
             exploration_constant: 1.414, // √2
-            max_time_ms: None,
-            use_heuristics: false,
+            max_time_ms: Some(60000),
+            use_heuristics: true,
         }
     }
     
