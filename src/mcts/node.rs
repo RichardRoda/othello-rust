@@ -171,6 +171,26 @@ impl MCTSNode {
             .max_by_key(|child| child.visits)
             .map(|boxed| boxed.as_ref())
     }
+    
+    /// Update statistics with a result value
+    /// `result` should be from the perspective of the node's current_player:
+    /// - 1.0 if current_player wins
+    /// - 0.0 if current_player loses
+    /// - 0.5 if it's a draw
+    pub fn update_statistics(&mut self, result: f64) {
+        self.visits += 1;
+        self.value += result;
+    }
+    
+    /// Get the current player for this node
+    pub fn current_player(&self) -> Player {
+        self.current_player
+    }
+    
+    /// Get a reference to the game state at this node
+    pub fn game_state(&self) -> &Game {
+        &self.game_state
+    }
 }
 
 #[cfg(test)]

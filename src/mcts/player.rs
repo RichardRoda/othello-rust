@@ -1,4 +1,7 @@
 use crate::mcts::node::MCTSNode;
+use crate::game::{Game, Player, GameState};
+use rand::seq::SliceRandom;
+use rand::thread_rng;
 
 pub struct MCTSPlayer {
     name: String,
@@ -62,6 +65,90 @@ impl MCTSPlayer {
                 .expect("Path index should be valid");
         }
         current
+    }
+    
+    /// Simulate a random game from given state
+    /// Returns: 1.0 if root_player wins, 0.0 if loses, 0.5 if draw
+    fn simulate(&self, game: &mut Game, root_player: Player) -> f64 {
+        let mut rng = thread_rng();
+        
+        // Play random moves until game ends
+        while matches!(game.get_game_state(), GameState::Playing) {
+            let valid_moves = game.get_valid_moves();
+            
+            if valid_moves.is_empty() {
+                // No valid moves, skip turn
+                game.skip_turn().ok();
+                continue;
+            }
+            
+            // Choose random move
+            if let Some(&move_pos) = valid_moves.choose(&mut rng) {
+                game.make_move(move_pos).ok();
+            }
+        }
+        
+        // Determine result from root player's perspective
+        match game.get_game_state() {
+            GameState::GameOver { winner } => {
+                match winner {
+                    Some(player) if player == root_player => 1.0,
+                    Some(_) => 0.0,
+                    None => 0.5,
+                }
+            }
+            _ => 0.5, // Should not happen
+        }
+    }
+    
+    /// Backpropagate result up the tree
+    /// Updates all nodes along the path from leaf to root
+    fn backpropagate(root: &mut MCTSNode, path: &[usize], result: f64, root_player: Player) {
+        // First, update root (from root player's perspective)
+        root.update_statistics(result);
+        
+        // Then update nodes along the path
+        // We need to work backwards to get the correct perspective for each node
+        for i in 0..path.len() {
+            // Path up to and including this node (inclusive)
+            let node_path = &path[..=i];
+            let node = Self::get_node_mut_at_path(root, node_path);
+            let node_player = node.current_player();
+            
+            // Result from this node's player perspective
+            // If node_player is the same as root_player, use result as-is
+            // If node_player is opposite, flip the result (1.0 - result)
+            let node_result = if node_player == root_player {
+                result
+            } else {
+                1.0 - result
+            };
+            
+            node.update_statistics(node_result);
+        }
+    }
+    
+    /// Perform one MCTS iteration
+    /// Combines selection, expansion, simulation, and backpropagation
+    fn mcts_iteration(&self, root: &mut MCTSNode, root_player: Player) {
+        // 1. Selection: Find path to leaf (read-only)
+        let path = Self::select_path(root, self.exploration_constant);
+        
+        // 2. Get the leaf node (mutable)
+        let leaf = Self::get_node_mut_at_path(root, &path);
+        
+        // 3. Expansion: Expand if not terminal and not expanded
+        if !leaf.is_terminal() && !leaf.is_expanded() {
+            leaf.expand();
+        }
+        
+        // 4. Simulation: Play random game from leaf state
+        // Clone the game state before simulation (simulate needs to mutate it)
+        let mut sim_game = leaf.game_state().clone();
+        let result = self.simulate(&mut sim_game, root_player);
+        
+        // 5. Backpropagation: Update statistics along path
+        Self::backpropagate(root, &path, result, root_player);
     }
 }
 
@@ -211,6 +298,123 @@ mod tests {
         // Don't expand - root has no children
         let path = MCTSPlayer::select_path(&root, 1.414);
         assert_eq!(path.len(), 0); // Should return empty path (root is leaf)
+    }
+    
+    #[test]
+    fn test_simulate_always_terminates() {
+        let player = MCTSPlayer {
+            name: "Test".to_string(),
+            iterations: 100,
+            exploration_constant: 1.414,
+            max_time_ms: None,
+            use_heuristics: false,
+        };
+        
+        let mut game = Game::new();
+        let root_player = game.current_player();
+        
+        // Run simulation - should always reach terminal state
+        let result = player.simulate(&mut game, root_player);
+        
+        // Game should be over
+        assert!(matches!(game.get_game_state(), GameState::GameOver { .. }));
+        
+        // Result should be valid (0.0, 0.5, or 1.0)
+        assert!(result >= 0.0 && result <= 1.0);
+    }
+    
+    #[test]
+    fn test_backpropagate_updates_statistics() {
+        let game = Game::new();
+        let mut root = MCTSNode::new(game);
+        let root_player = root.current_player();
+        
+        // Expand root to create children
+        root.expand();
+        
+        if root.has_children() {
+            // Select a path to a child
+            let path = MCTSPlayer::select_path(&root, 1.414);
+            
+            // Initial visits should be 0
+            assert_eq!(root.visits(), 0);
+            
+            // Backpropagate a win (1.0) for root player
+            MCTSPlayer::backpropagate(&mut root, &path, 1.0, root_player);
+            
+            // Root should now have 1 visit
+            assert_eq!(root.visits(), 1);
+            
+            // Root value should be 1.0 (win from root player's perspective)
+            assert_eq!(root.average_value(), 1.0);
+            
+            // If path has nodes, they should also be updated
+            if !path.is_empty() {
+                // Get the leaf node
+                let leaf = MCTSPlayer::get_node_mut_at_path(&mut root, &path);
+                assert_eq!(leaf.visits(), 1);
+            }
+        }
+    }
+    
+    #[test]
+    fn test_mcts_iteration_completes() {
+        let player = MCTSPlayer {
+            name: "Test".to_string(),
+            iterations: 100,
+            exploration_constant: 1.414,
+            max_time_ms: None,
+            use_heuristics: false,
+        };
+        
+        let game = Game::new();
+        let mut root = MCTSNode::new(game);
+        let root_player = root.current_player();
+        
+        // Run one iteration
+        player.mcts_iteration(&mut root, root_player);
+        
+        // Root should have been visited
+        assert_eq!(root.visits(), 1);
+        
+        // Root should have been expanded (unless it's terminal)
+        if !root.is_terminal() {
+            assert!(root.is_expanded());
+            assert!(root.has_children());
+        }
+    }
+    
+    #[test]
+    fn test_backpropagate_flips_result_correctly() {
+        let game = Game::new();
+        let mut root = MCTSNode::new(game);
+        let root_player = root.current_player();
+        
+        // Expand root to create children
+        root.expand();
+        
+        if root.has_children() {
+            // Select a path to a child
+            let path = MCTSPlayer::select_path(&root, 1.414);
+            
+            // Get the child node to check its player
+            let child = MCTSPlayer::get_node_mut_at_path(&mut root, &path);
+            let child_player = child.current_player();
+            
+            // Backpropagate a loss (0.0) for root player
+            // For root: 0.0 (loss from root player's perspective)
+            // For child: 1.0 - 0.0 = 1.0 (win from child player's perspective)
+            MCTSPlayer::backpropagate(&mut root, &path, 0.0, root_player);
+            
+            // Root should have 0.0 average value (loss)
+            assert_eq!(root.average_value(), 0.0);
+            
+            // If child player is different from root, child should have 1.0
+            if !path.is_empty() && child_player != root_player {
+                let child_after = MCTSPlayer::get_node_mut_at_path(&mut root, &path);
+                assert_eq!(child_after.average_value(), 1.0);
+            }
+        }
     }
 }
 
