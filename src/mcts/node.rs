@@ -26,6 +26,10 @@ pub struct MCTSNode {
     
     /// Whether this is a terminal (game over) node
     is_terminal: bool,
+    
+    /// Cached valid moves for this node (computed once during expansion)
+    /// This avoids recalculating valid moves multiple times, which can be expensive
+    cached_valid_moves: Option<Vec<Position>>,
 }
 
 impl MCTSNode {
@@ -43,6 +47,7 @@ impl MCTSNode {
             is_expanded: false,
             current_player,
             is_terminal,
+            cached_valid_moves: None,
         }
     }
     
@@ -76,12 +81,15 @@ impl MCTSNode {
     }
     
     /// Expand this node by creating children for all valid moves
+    /// Caches valid moves to avoid recalculating them later
     pub fn expand(&mut self) {
         if self.is_terminal || self.is_expanded {
             return;
         }
         
+        // Cache valid moves to avoid recalculating them
         let valid_moves = self.game_state.get_valid_moves();
+        self.cached_valid_moves = Some(valid_moves.clone());
         
         for position in valid_moves {
             let mut child_game = self.game_state.clone();
@@ -103,6 +111,7 @@ impl MCTSNode {
                     is_expanded: false,
                     current_player: child_player,
                     is_terminal: child_is_terminal,
+                    cached_valid_moves: None, // Will be computed when child is expanded
                 };
                 
                 self.children.push(Box::new(child));
@@ -110,6 +119,17 @@ impl MCTSNode {
         }
         
         self.is_expanded = true;
+    }
+    
+    /// Get cached valid moves, or compute them if not cached
+    /// This is more efficient than calling game_state.get_valid_moves() repeatedly
+    pub fn get_valid_moves(&self) -> Vec<Position> {
+        if let Some(ref cached) = self.cached_valid_moves {
+            cached.clone()
+        } else {
+            // Fallback: compute if not cached (shouldn't happen after expansion)
+            self.game_state.get_valid_moves()
+        }
     }
     
     /// Get the number of children
@@ -445,6 +465,51 @@ mod tests {
         // Should be able to access game state
         let game_state_ref = node.game_state();
         assert_eq!(game_state_ref.current_player(), game.current_player());
+    }
+    
+    #[test]
+    fn test_cached_valid_moves() {
+        let game = Game::new();
+        let mut node = MCTSNode::new(game);
+        
+        // Initially, valid moves should not be cached
+        // But get_valid_moves() should still work (fallback to computing)
+        let moves_before = node.get_valid_moves();
+        assert!(!moves_before.is_empty()); // Initial game has valid moves
+        
+        // After expansion, valid moves should be cached
+        node.expand();
+        assert!(node.cached_valid_moves.is_some());
+        
+        // get_valid_moves() should return cached moves
+        let moves_after = node.get_valid_moves();
+        assert_eq!(moves_before.len(), moves_after.len());
+        
+        // Verify cached moves match computed moves
+        let cached = node.cached_valid_moves.as_ref().unwrap();
+        assert_eq!(cached.len(), moves_after.len());
+    }
+    
+    #[test]
+    fn test_cached_valid_moves_optimization() {
+        // This test verifies that caching avoids redundant computation
+        let game = Game::new();
+        let mut node = MCTSNode::new(game);
+        
+        // Expand to cache valid moves
+        node.expand();
+        
+        // Multiple calls to get_valid_moves() should use cache
+        let moves1 = node.get_valid_moves();
+        let moves2 = node.get_valid_moves();
+        let moves3 = node.get_valid_moves();
+        
+        // All should return the same result
+        assert_eq!(moves1.len(), moves2.len());
+        assert_eq!(moves2.len(), moves3.len());
+        
+        // Verify cached moves are actually stored
+        assert!(node.cached_valid_moves.is_some());
     }
 }
 

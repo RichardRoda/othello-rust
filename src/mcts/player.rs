@@ -47,6 +47,66 @@ impl MCTSPlayer {
         self.use_heuristics = enable;
     }
     
+    /// Create an easy difficulty MCTS player
+    /// - 200 iterations
+    /// - Higher exploration (2.0) for more random play
+    /// - No heuristics
+    pub fn easy() -> Self {
+        Self::with_iterations("MCTS (Easy)", 200)
+            .with_exploration(2.0)
+            .with_heuristics(false)
+    }
+    
+    /// Create a medium difficulty MCTS player
+    /// - 1000 iterations
+    /// - Standard exploration (√2 ≈ 1.414)
+    /// - Heuristics enabled
+    pub fn medium() -> Self {
+        Self::with_iterations("MCTS (Medium)", 1000)
+            .with_exploration(1.414)
+            .with_heuristics(true)
+    }
+    
+    /// Create a hard difficulty MCTS player
+    /// - 3000 iterations
+    /// - Standard exploration (√2 ≈ 1.414)
+    /// - Heuristics enabled
+    pub fn hard() -> Self {
+        Self::with_iterations("MCTS (Hard)", 3000)
+            .with_exploration(1.414)
+            .with_heuristics(true)
+    }
+    
+    /// Create an expert difficulty MCTS player
+    /// - 10000 iterations
+    /// - Lower exploration (1.0) for more exploitation
+    /// - Heuristics enabled
+    /// - 5 second time limit
+    pub fn expert() -> Self {
+        Self::with_iterations("MCTS (Expert)", 10000)
+            .with_exploration(1.0)
+            .with_heuristics(true)
+            .with_time_limit_ms(5000)
+    }
+    
+    /// Builder method: set exploration constant and return self
+    pub fn with_exploration(mut self, c: f64) -> Self {
+        self.exploration_constant = c;
+        self
+    }
+    
+    /// Builder method: set time limit and return self
+    pub fn with_time_limit_ms(mut self, ms: u64) -> Self {
+        self.max_time_ms = Some(ms);
+        self
+    }
+    
+    /// Builder method: set heuristics usage and return self
+    pub fn with_heuristics(mut self, enable: bool) -> Self {
+        self.use_heuristics = enable;
+        self
+    }
+    
     /// Perform MCTS search and return best move
     fn mcts_search(&self, game: &Game) -> Option<Position> {
         let mut root = MCTSNode::new(game.clone());
@@ -282,6 +342,7 @@ impl crate::player::PlayerTrait for MCTSPlayer {
 mod tests {
     use super::*;
     use crate::game::Game;
+    use crate::player::PlayerTrait;
     
     #[test]
     fn test_select_path_from_unexpanded_root() {
@@ -588,6 +649,84 @@ mod tests {
             let move_pos = selected_move.unwrap();
             assert!(valid_moves.contains(&move_pos));
         }
+    }
+    
+    #[test]
+    fn test_difficulty_presets() {
+        // Test easy preset
+        let easy = MCTSPlayer::easy();
+        assert_eq!(easy.iterations, 200);
+        assert_eq!(easy.exploration_constant, 2.0);
+        assert!(!easy.use_heuristics);
+        assert_eq!(easy.get_name(), "MCTS (Easy)");
+        
+        // Test medium preset
+        let medium = MCTSPlayer::medium();
+        assert_eq!(medium.iterations, 1000);
+        assert_eq!(medium.exploration_constant, 1.414);
+        assert!(medium.use_heuristics);
+        assert_eq!(medium.get_name(), "MCTS (Medium)");
+        
+        // Test hard preset
+        let hard = MCTSPlayer::hard();
+        assert_eq!(hard.iterations, 3000);
+        assert_eq!(hard.exploration_constant, 1.414);
+        assert!(hard.use_heuristics);
+        assert_eq!(hard.get_name(), "MCTS (Hard)");
+        
+        // Test expert preset
+        let expert = MCTSPlayer::expert();
+        assert_eq!(expert.iterations, 10000);
+        assert_eq!(expert.exploration_constant, 1.0);
+        assert!(expert.use_heuristics);
+        assert_eq!(expert.max_time_ms, Some(5000));
+        assert_eq!(expert.get_name(), "MCTS (Expert)");
+    }
+    
+    #[test]
+    fn test_builder_methods() {
+        let player = MCTSPlayer::new("Test")
+            .with_exploration(2.5)
+            .with_time_limit_ms(1000)
+            .with_heuristics(true);
+        
+        assert_eq!(player.exploration_constant, 2.5);
+        assert_eq!(player.max_time_ms, Some(1000));
+        assert!(player.use_heuristics);
+        
+        // Test chaining
+        let player2 = MCTSPlayer::with_iterations("Test2", 500)
+            .with_exploration(1.0)
+            .with_heuristics(false)
+            .with_time_limit_ms(2000);
+        
+        assert_eq!(player2.iterations, 500);
+        assert_eq!(player2.exploration_constant, 1.0);
+        assert!(!player2.use_heuristics);
+        assert_eq!(player2.max_time_ms, Some(2000));
+    }
+    
+    #[test]
+    fn test_difficulty_presets_choose_moves() {
+        // Verify that difficulty presets can actually choose moves
+        let game = Game::new();
+        
+        let easy = MCTSPlayer::easy();
+        let move_opt = easy.choose_move(&game);
+        assert!(move_opt.is_some());
+        
+        let medium = MCTSPlayer::medium();
+        let move_opt = medium.choose_move(&game);
+        assert!(move_opt.is_some());
+        
+        let hard = MCTSPlayer::hard();
+        let move_opt = hard.choose_move(&game);
+        assert!(move_opt.is_some());
+        
+        // Expert might take longer, but should still work
+        let expert = MCTSPlayer::expert();
+        let move_opt = expert.choose_move(&game);
+        assert!(move_opt.is_some());
     }
 }
 
