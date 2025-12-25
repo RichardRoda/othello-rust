@@ -1,7 +1,9 @@
 use crate::mcts::node::MCTSNode;
+use crate::mcts::heuristics::Heuristics;
 use crate::game::{Game, Player, GameState};
 use crate::board::Position;
 use rand::seq::SliceRandom;
+use rand::Rng;
 use rand::thread_rng;
 use std::time::Instant;
 
@@ -127,7 +129,6 @@ impl MCTSPlayer {
     fn simulate(&self, game: &mut Game, root_player: Player) -> f64 {
         let mut rng = thread_rng();
         
-        // Play random moves until game ends
         while matches!(game.get_game_state(), GameState::Playing) {
             let valid_moves = game.get_valid_moves();
             
@@ -137,9 +138,17 @@ impl MCTSPlayer {
                 continue;
             }
             
-            // Choose random move
-            if let Some(&move_pos) = valid_moves.choose(&mut rng) {
-                game.make_move(move_pos).ok();
+            // Choose move based on strategy
+            let move_pos = if self.use_heuristics {
+                self.heuristic_move_selection(game, &valid_moves, &mut rng)
+            } else {
+                valid_moves.choose(&mut rng).copied()
+            };
+            
+            if let Some(pos) = move_pos {
+                game.make_move(pos).ok();
+            } else {
+                game.skip_turn().ok();
             }
         }
         
@@ -154,6 +163,46 @@ impl MCTSPlayer {
             }
             _ => 0.5, // Should not happen
         }
+    }
+    
+    /// Select a move using heuristics with weighted random selection
+    /// Returns a move chosen probabilistically based on heuristic scores
+    fn heuristic_move_selection(
+        &self,
+        game: &Game,
+        moves: &[Position],
+        rng: &mut impl Rng,
+    ) -> Option<Position> {
+        // Score all moves
+        let scored_moves: Vec<(Position, f64)> = moves.iter()
+            .map(|&pos| {
+                let score = Heuristics::evaluate_move(game, pos);
+                (pos, score.max(0.01)) // Ensure positive scores for probability
+            })
+            .collect();
+        
+        // Calculate total score
+        let total_score: f64 = scored_moves.iter().map(|(_, score)| score).sum();
+        
+        if total_score == 0.0 {
+            // Fallback to random if all scores are zero or negative
+            return moves.choose(rng).copied();
+        }
+        
+        // Weighted random selection
+        let mut random_value: f64 = rng.gen();
+        random_value *= total_score;
+        
+        let mut cumulative = 0.0;
+        for (pos, score) in scored_moves {
+            cumulative += score;
+            if random_value <= cumulative {
+                return Some(pos);
+            }
+        }
+        
+        // Fallback (shouldn't happen, but return last move if it does)
+        moves.last().copied()
     }
     
     /// Backpropagate result up the tree
@@ -491,6 +540,53 @@ mod tests {
                 let child_after = MCTSPlayer::get_node_mut_at_path(&mut root, &path);
                 assert_eq!(child_after.average_value(), 1.0);
             }
+        }
+    }
+    
+    #[test]
+    fn test_simulate_with_heuristics_enabled() {
+        let player = MCTSPlayer {
+            name: "Test".to_string(),
+            iterations: 100,
+            exploration_constant: 1.414,
+            max_time_ms: None,
+            use_heuristics: true, // Enable heuristics
+        };
+        
+        let mut game = Game::new();
+        let root_player = game.current_player();
+        
+        // Run simulation - should always reach terminal state
+        let result = player.simulate(&mut game, root_player);
+        
+        // Game should be over
+        assert!(matches!(game.get_game_state(), GameState::GameOver { .. }));
+        
+        // Result should be valid (0.0, 0.5, or 1.0)
+        assert!(result >= 0.0 && result <= 1.0);
+    }
+    
+    #[test]
+    fn test_heuristic_move_selection_chooses_valid_move() {
+        let player = MCTSPlayer {
+            name: "Test".to_string(),
+            iterations: 100,
+            exploration_constant: 1.414,
+            max_time_ms: None,
+            use_heuristics: true,
+        };
+        
+        let game = Game::new();
+        let valid_moves = game.get_valid_moves();
+        
+        if !valid_moves.is_empty() {
+            let mut rng = thread_rng();
+            let selected_move = player.heuristic_move_selection(&game, &valid_moves, &mut rng);
+            
+            // Should return a valid move
+            assert!(selected_move.is_some());
+            let move_pos = selected_move.unwrap();
+            assert!(valid_moves.contains(&move_pos));
         }
     }
 }
