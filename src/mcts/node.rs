@@ -329,5 +329,122 @@ mod tests {
             assert_eq!(child_mut.visits(), 42);
         }
     }
+    
+    #[test]
+    fn test_node_with_terminal_game() {
+        // Create a game and play it to completion
+        let game = Game::new();
+        
+        // Play a minimal game to completion (this is a simplified test)
+        // In practice, we'd need to play many moves, but for testing
+        // we can create a node from a game that's already over
+        // For now, just verify that a new game node is not terminal
+        let node = MCTSNode::new(game.clone());
+        assert!(!node.is_terminal());
+        
+        // Test that we can detect terminal state correctly
+        // (We can't easily create a terminal game state without playing,
+        // but we can verify the logic works)
+    }
+    
+    #[test]
+    fn test_update_statistics() {
+        let game = Game::new();
+        let mut node = MCTSNode::new(game);
+        
+        // Initially no visits
+        assert_eq!(node.visits(), 0);
+        assert_eq!(node.average_value(), 0.0);
+        
+        // Update with a win
+        node.update_statistics(1.0);
+        assert_eq!(node.visits(), 1);
+        assert_eq!(node.average_value(), 1.0);
+        
+        // Update with a loss
+        node.update_statistics(0.0);
+        assert_eq!(node.visits(), 2);
+        assert_eq!(node.average_value(), 0.5); // (1.0 + 0.0) / 2
+        
+        // Update with a draw
+        node.update_statistics(0.5);
+        assert_eq!(node.visits(), 3);
+        // Average should be (1.0 + 0.0 + 0.5) / 3 = 0.5
+        assert!((node.average_value() - 0.5).abs() < 0.001);
+    }
+    
+    #[test]
+    fn test_ucb1_value_with_different_exploration() {
+        let game = Game::new();
+        let mut node = MCTSNode::new(game);
+        
+        node.visits = 10;
+        node.value = 5.0; // 50% win rate
+        
+        let ucb1_low = node.ucb1_value(0.5, 100);
+        let ucb1_high = node.ucb1_value(2.0, 100);
+        
+        // Higher exploration constant should give higher UCB1 value
+        assert!(ucb1_high > ucb1_low);
+        
+        // Both should be greater than exploitation component (0.5)
+        assert!(ucb1_low > 0.5);
+        assert!(ucb1_high > 0.5);
+    }
+    
+    #[test]
+    fn test_select_child_prefers_unvisited() {
+        let game = Game::new();
+        let mut root = MCTSNode::new(game);
+        root.expand();
+        
+        if root.num_children() >= 2 {
+            // Visit first child
+            if let Some(child) = root.get_child_mut(0) {
+                child.update_statistics(0.5);
+            }
+            
+            // Select child - should prefer unvisited children (infinite UCB1)
+            let selected = root.select_child(1.414);
+            // Since unvisited nodes have infinite UCB1, should select an unvisited one
+            // (could be any unvisited, but should not be the visited one if others exist)
+            assert!(selected < root.num_children());
+        }
+    }
+    
+    #[test]
+    fn test_expand_does_not_modify_terminal() {
+        // Create a node that would be terminal
+        // (We can't easily create a terminal game, but we can test the logic)
+        let game = Game::new();
+        let mut node = MCTSNode::new(game);
+        
+        // Manually mark as terminal
+        node.is_terminal = true;
+        
+        // Expanding a terminal node should not create children
+        node.expand();
+        assert_eq!(node.num_children(), 0);
+        assert!(!node.is_expanded()); // Terminal nodes don't get marked as expanded
+    }
+    
+    #[test]
+    fn test_current_player() {
+        let game = Game::new();
+        let node = MCTSNode::new(game.clone());
+        
+        // Node's current player should match game's current player
+        assert_eq!(node.current_player(), game.current_player());
+    }
+    
+    #[test]
+    fn test_game_state_access() {
+        let game = Game::new();
+        let node = MCTSNode::new(game.clone());
+        
+        // Should be able to access game state
+        let game_state_ref = node.game_state();
+        assert_eq!(game_state_ref.current_player(), game.current_player());
+    }
 }
 

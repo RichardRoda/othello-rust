@@ -26,3 +26,10 @@ mint = { version = "0.5", optional = true }
 default = ["gui"]
 gui = ["ggez", "keyframe", "mint"]
 
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "mcts_bench"
+harness = false
+
