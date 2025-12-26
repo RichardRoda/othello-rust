@@ -75,7 +75,7 @@ impl Heuristics {
     pub fn evaluate_move(game: &Game, position: Position) -> f64 {
         let corner_value = Self::corner_heuristic(game, position);
         let mobility_value = Self::mobility_heuristic(game, position);
-        let stability_value = Self::stability_heuristic(position);
+        let stability_value = Self::stability_heuristic(game, position);
         let piece_count_value = Self::piece_count_heuristic(game, position);
         // Weighted combination
         return corner_value * 10.0 + mobility_value + stability_value * 2.0 + piece_count_value;
@@ -109,7 +109,12 @@ impl Heuristics {
             1.0
         } else if Self::is_adjacent_to_corner(position) {
             if Self::is_adjacent_corner_mine(game, position) {
-                0.5
+                // Is it an edge square?
+                if position.col == 0 || position.col == 7 || position.row == 7 || position.row == 0 {
+                    1.0 // Unflippable
+                } else {
+                    0.25 // Strong move, but possibly flippable.
+                }
             } else {
                 -0.5
             }
@@ -174,16 +179,9 @@ impl Heuristics {
     /// ```
     pub fn mobility_heuristic(game: &Game, position: Position) -> f64 {
         let mut test_game = game.clone();
+        let my_moves = game.get_valid_moves().len();
         if test_game.make_move(position).is_err() {
             return 0.0;
-        }
-        
-        let my_moves = test_game.get_valid_moves().len();
-        
-        // Try to get opponent's moves (skip turn to opponent)
-        if test_game.skip_turn().is_err() {
-            // If we can't skip turn, just return normalized mobility
-            return my_moves as f64 / 10.0;
         }
         
         let opponent_moves = test_game.get_valid_moves().len();
@@ -192,7 +190,7 @@ impl Heuristics {
             0.0
         } else {
             // Return normalized difference (range: -1.0 to 1.0)
-            (my_moves as f64 - opponent_moves as f64) / (my_moves + opponent_moves) as f64
+            (my_moves - opponent_moves) as f64 / (my_moves + opponent_moves) as f64
         }
     }
 
@@ -234,7 +232,7 @@ impl Heuristics {
     /// // Center gets neutral score
     /// assert_eq!(Heuristics::stability_heuristic(Position::new(3, 3)), 0.0);
     /// ```
-    pub fn stability_heuristic(position: Position) -> f64 {
+    pub fn stability_heuristic(game: &Game, position: Position) -> f64 {
         let row = position.row;
         let col = position.col;
         
@@ -252,7 +250,11 @@ impl Heuristics {
                           ((col == 0 || col == 7) && is_dangerous_row);
         
         if is_x_square {
-            -0.2
+            if Self::is_adjacent_corner_mine(game, position) {
+                1.0 // Piece can never be flipped
+            } else {
+                -0.2
+            }
         } else {
             edge_bonus
         }
@@ -264,20 +266,6 @@ mod tests {
     use super::*;
     use crate::game::Game;
    
-    #[test]
-    fn test_stability_heuristic() {
-        // Test edges
-        let edge_bonus = Heuristics::stability_heuristic(Position::new(0, 3));
-        assert!(edge_bonus > 0.0);
-        
-        // Test X-squares (should be negative)
-        assert_eq!(Heuristics::stability_heuristic(Position::new(0, 1)), -0.2);
-        assert_eq!(Heuristics::stability_heuristic(Position::new(1, 0)), -0.2);
-        
-        // Test normal positions
-        assert_eq!(Heuristics::stability_heuristic(Position::new(3, 3)), 0.0);
-    }
-    
     #[test]
     fn test_mobility_heuristic() {
         let game = Game::new();

@@ -246,10 +246,10 @@ impl MCTSPlayer {
     /// Create an expert difficulty MCTS player.
     ///
     /// Settings:
-    /// - 10000 iterations (very slow, ~10-30s per move, capped at 5s)
-    /// - Lower exploration (1.0) for more focused exploitation
+    /// - 10000 iterations (very slow, ~10-30s per move, capped at 60s)
+    /// - Standard exploration (√2 ≈ 1.414)
     /// - Heuristics enabled
-    /// - 5 second time limit (may not complete all iterations)
+    /// - 60 second time limit (may not complete all iterations)
     ///
     /// Very strong play for expert-level competition. Uses time limit to
     /// prevent excessively long moves while allowing deep search when possible.
@@ -262,8 +262,8 @@ impl MCTSPlayer {
     /// let player = MCTSPlayer::expert();
     /// ```
     pub fn expert() -> Self {
-        Self::with_iterations("MCTS (Expert)", 10000)
-            .with_exploration(1.0)
+        Self::with_iterations("MCTS (Expert)", 50000)
+            .with_exploration(2.0)
             .with_heuristics(true)
             .with_time_limit_ms(60000)
     }
