@@ -1,6 +1,7 @@
 use crate::player::PlayerTrait;
 use crate::{HumanPlayer, AIPlayer};
 use crate::mcts::MCTSPlayer;
+use crate::minimax::MinimaxPlayer;
 
 /// Represents the type of player that can be selected
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -11,6 +12,10 @@ pub enum PlayerType {
     MCTSMedium,
     MCTSHard,
     MCTSExpert,
+    MinimaxEasy,
+    MinimaxMedium,
+    MinimaxHard,
+    MinimaxExpert,
 }
 
 impl PlayerType {
@@ -23,6 +28,10 @@ impl PlayerType {
             PlayerType::MCTSMedium,
             PlayerType::MCTSHard,
             PlayerType::MCTSExpert,
+            PlayerType::MinimaxEasy,
+            PlayerType::MinimaxMedium,
+            PlayerType::MinimaxHard,
+            PlayerType::MinimaxExpert,
         ]
     }
     
@@ -35,6 +44,10 @@ impl PlayerType {
             PlayerType::MCTSMedium => "MCTS (Medium)",
             PlayerType::MCTSHard => "MCTS (Hard)",
             PlayerType::MCTSExpert => "MCTS (Expert)",
+            PlayerType::MinimaxEasy => "Minimax (Easy)",
+            PlayerType::MinimaxMedium => "Minimax (Medium)",
+            PlayerType::MinimaxHard => "Minimax (Hard)",
+            PlayerType::MinimaxExpert => "Minimax (Expert)",
         }
     }
     
@@ -47,6 +60,10 @@ impl PlayerType {
             PlayerType::MCTSMedium => Box::new(MCTSPlayer::medium()),
             PlayerType::MCTSHard => Box::new(MCTSPlayer::hard()),
             PlayerType::MCTSExpert => Box::new(MCTSPlayer::expert()),
+            PlayerType::MinimaxEasy => Box::new(MinimaxPlayer::easy()),
+            PlayerType::MinimaxMedium => Box::new(MinimaxPlayer::medium()),
+            PlayerType::MinimaxHard => Box::new(MinimaxPlayer::hard()),
+            PlayerType::MinimaxExpert => Box::new(MinimaxPlayer::expert()),
         }
     }
     
