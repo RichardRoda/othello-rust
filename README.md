@@ -48,7 +48,7 @@ beaten.  Even allowing for a multi-threaded MCTS algorithm and up to 60 seconds 
 
 But… This was not project failure.  Rather, it illustrates a strength of AI-assisted coding: My design failed, but I can quickly implement
 another design.  So I ask Rust to implement min-max A/B pruning [^3], the algorithm I did in C++ a long time ago in a galaxy far, far away.
-Once that was working, I asked Rust to parallelize the algorithm based on the available processors.  To say min-max A/B pruning did better than MCTS is an understatement.  If you think you are good at Rust, the Minmax (expert) may make you question your life choices.
+Once that was working, I asked Rust to parallelize the algorithm based on the available processors.  To say min-max A/B pruning did better than MCTS is an understatement.  If you think you are good at Othello, the Minmax (expert) may make you question your life choices.
 
 #### A typical game with Minmax (expert) kicking my butt.
 
