@@ -1,230 +1,85 @@
-# Othello Game in Rust: A journey with Cursor
+TL;DR: I just want to run it.
 
-I was able to implement this in less than a day in a language (Rust) that I have beginner
-level knowledge of.  The intent of this is to demonstrate what can be done with cursor
-in a few hours.
-
-An implementation of the classic Othello (Reversi) game written in Rust with a graphical interface.
-
-## Features
-
-- Full Othello game implementation with proper rules
-- **Two interface options:**
-  - **Graphical version (Default)** - Full GUI with animations (requires Rust 1.81+)
-  - **Console version** - Enhanced terminal UI with colors and Unicode symbols
-- Enhanced console-based user interface with:
-  - **Colorized terminal output** - Beautiful colors for pieces, scores, and indicators
-  - **Visual piece symbols** - Uses ○ (white) and ● (black) circles instead of letters
-  - **Valid move highlighting** - Green dots (•) show where you can play
-  - **Enhanced board borders** - Unicode box-drawing characters for a polished look
-  - **Color-coded scores** - Easy-to-read score display with colored symbols
-- Graphical interface features:
-  - **Smooth animations** - Piece flips animated using keyframe easing functions
-  - **Mouse input** - Click to place pieces
-  - **Visual feedback** - Valid moves highlighted on the board
-  - **Modern UI** - Clean, colorful interface with score display
-- Support for human vs human gameplay
-- **Monte Carlo Tree Search (MCTS) AI player** - Advanced AI with multiple difficulty levels
-- Modular, extensible architecture
-- Error handling with Rust's Result types
-
-## Installation
-
-Make sure you have Rust installed. If not, install it from [rustup.rs](https://rustup.rs/).
-
-## Building
-
-```bash
-cargo build --release
+```sh
+cargo run --release --bin othello
 ```
+Use up/down arrow keys and enter to select player.  Use mouse to make moves.
 
-## Running
+# Othello Game in Rust: A Journey With Cursor
 
-### Graphical Version (Default)
+I was able to implement this in about a day using a language (Rust) with which I have a beginner's level of knowledge.  The intent of this is to demonstrate what can be done with Cursor
+in about a day to 1.5 days effort. [^1]
 
-The GUI version is now the default interface. Simply run:
+Why Othello?  A long time ago, in a galaxy far, far away… I was a TA (Teacher’s Assistant) for a
+101-level C++ programming class.  The class project was to make an Othello game playable with two
+human players sharing the same terminal.  The TAs in the class built the game.  It took me about a day to
+accomplish that.  After building it, I was bored, so I decided to implement the recursive min-max algorithm with
+a simplistic scoring system that used weighted values for the board positions.  Corners and edges were worth more,
+spaces immediately in front of them were worth less, and everything else had a baseline value.  Because of this,
+I have both domain knowledge and prior experience in implementing such a system.
 
-```bash
-cargo run --bin othello
-```
+Why Rust?  Because it is stupid fast (especially when compared to runtimes like Node or Java) yet still has memory safety.
+The superior speed will allow it to implement more intensive algorithms with deeper lookaheads
+and richer evaluation functions.  Rust’s safety will allow me to focus on the game itself and rely on the
+language itself for safety.  In fact, Rust takes safety to sometimes painful levels.  Example: IEEE floating point is only partially ordered.  Why? Because `NaN` is not equal to anything, not even itself.  So you must decide what to do with `NaN`.
+Options include allowing the system to Panic (exit ungracefully) if encountered (better be sure it doesn’t happen),
+or to handle it as a separate condition.  What you can’t do is ignore it: you will get a compiler error.  It almost goes
+without saying: there is no such thing as a magic `null` or `undefined` value that can be used with all types.
+The closest thing is the `Option` enum type, which is more like Java’s `Optional` type than a null: Option values may
+be `None` or `Some(value)`. [^2] Rust avoids the [Billion Dollar Mistake](https://www.youtube.com/watch?v=ybrQvs4x0Ps) of
+null references and implicit behavior in general.
 
-Or run the release version:
+Why Cursor? Because I wanted to see if and how I could develop something in a domain I know, using a language that I can
+read but would have difficulty writing it in.
 
-```bash
-cargo run --bin othello --release
-```
+After a few false starts, the implementation strategy I found that worked best for this kind of project is to request a
+design or implementation document, review it, make changes (or ask Cursor to make changes to it).  Once the document is
+sound, then in a new session request Cursor to implement the design or implementation document.  The “new session” is important.
+By breaking apart the design / implementation design, and implementation execution into separate steps, token exhaustion is
+avoided.  Other benefits are the ability to review and amend the design before it’s executed, and having the documentation itself
+for reference.  One of the ways you know Rust is not a human developer is that it actually updates the documentation to reflect changes that
+are requested when such changes touch on parts of the codebase covered by the documentation.
 
-**Note:** The GUI version requires Rust 1.81 or later. If you have an older Rust version, use the console version instead.
+The first type of Othello opponent I requested is a [Monte Carlo Tree Search (MCTS)](MCTS_DESIGN.md).  I requested this because
+the programs that beat the world’s best players are often written using this algorithm.  Unfortunately, they also run on some
+of the world’s biggest computers, which allow them a large sample size with a correspondingly good confidence rating.
+My humble laptop and desktop computers processing, feeble in comparison to the mighty machines that defeat champions, are easily
+beaten.  Even allowing for a multi-threaded MCTS algorithm and up to 60 seconds to process per move resulted in a weak player.
 
-### Console Version
+But… This was not project failure.  Rather, it illustrates a strength of AI-assisted coding: My design failed, but I can quickly implement
+another design.  So I ask Rust to implement min-max A/B pruning [^3], the algorithm I did in C++ a long time ago in a galaxy far, far away.
+Once that was working, I asked Rust to parallelize the algorithm based on the available processors.  To say min-max A/B pruning did better than MCTS is an understatement.  If you think you are good at Rust, the Minmax (expert) may make you question your life choices.
 
-To use the console-based interface instead:
+#### A typical game with Minmax (expert) kicking my butt.
 
-```bash
-cargo run --bin othello-console
-```
+![Min max beating me (black) 16 to 48 (white)](/readme-images/MinMaxExpertWin.png "Me (black) defeated 16 to 48")
 
-Or run the release version:
+If you have new a 16+ core / 32+ CPU thread machine, the “Expert” mode will be even more merciless because it will be less
+likely to finish before it is completed due to the five-second timeout.
 
-```bash
-cargo run --bin othello-console --release
-```
+I left the MCTS in as a reference so you can see the difference in the performance.  Normally, MCTS would be removed.
+You can set both the white and black to computer algorithms to compare them.
 
-The graphical version provides:
-- Beautiful visual interface with colored board
-- Smooth piece flip animations using keyframe easing
-- Mouse-based move selection
-- Visual indicators for valid moves
-- Score and game state display
+## Takeaways:
 
-## How to Play
+* The generate documentation / review and amend / execute documentation workflow works well and minimizes surprises.  You also have up-to-date documentation for what you built.
+* Use feature branches for new features. That way, if things go off the rails, it is easy to get back to the good code
+that is in the main or master branch.  In a corporate setting, this is likely how it is already done.
+* It’s OK to try different approaches.  The rapid prototyping capability of AI-assisted development [^4] makes choosing
+the wrong approach not a big deal.  The flip side is that a better approach may be found via this prototyping
+that would be too risky to try with conventional development methods.
+* The ugly: Using the Cursor IDE instead of my favorite IntelliJ.  Cursor does weird things.  It randomly reformats all of my files with whitespace (which would undoubtedly cause immense joy to the people reviewing such a PR - Pull Request).  Even merging branches worked weirdly.  It staged the changes as if I had made them in the target branch and had me commit them.  I resorted to the git command line merge because I do not understand what Cursor is doing, and do not wish to lose the "branch merge" parent commit that a normal merge operation would create.
+* AI will not replace you, but a developer fluent in AI tools may.  This technology has well documented security issues.  It hallucinates (makes stuff up).  Yet with all this said, the productivity improvements are too compelling to be ignored.
 
-1. The game starts with Black player's turn
-2. Enter your move using one of these formats:
-   - Letter-number format: `d3`, `a1`, `h8` (column letter + row number)
-   - Coordinate format: `3,3` or `3 3` (row, col, both 0-7 or 1-8)
-3. Valid moves are shown after each turn
-4. If you have no valid moves, your turn will be skipped automatically
-5. The game ends when neither player can make a move
-6. The player with more pieces wins
+The cursor generated documentation for the game itself may be found in [ABOUT-GAME.md](ABOUT-GAME.md).
 
-## Example Moves
+[^1]: Yes, the commit timestamps span days, but this is because this was worked on during vacation during unfocused “free time”.  My guesstimate is that it represents 1 - 1.5 days of focused work time.
 
-- `d3` - Place piece at column D, row 3
-- `3,3` - Place piece at row 3, column 3 (0-indexed)
-- `q` or `quit` - Quit the game
+[^2]: Enums in Rust are different than Java.  In Java, the enum itself defines a type with certain inherited methods and zero or more methods defined in the enum itself that all the singleton enum values implement or inherit from the base enum definition.  In Rust, an enum itself is more like a collection of related types.  Enum values
+can be bound to additional values (such as Some, which is bound with its value).  Such enum values are obviously not singletons.
 
-## Game Rules
+[^3]: The A/B pruning sounds fancy, but it is simple: Once the game finds a winning move (that is, a move that for all possible opponent moves a countermove exists that leads to a winning state), it stops traversing the move tree for any sibling
+moves and returns that move.  Once you have a winning move, evaluating any other moves is pointless.
 
-- Players alternate turns (Black starts)
-- A valid move must flank one or more opponent pieces
-- All flanked pieces are flipped to your color
-- Game ends when neither player can make a valid move
-- Player with more pieces wins
-
-## MCTS AI Player
-
-The game includes a sophisticated Monte Carlo Tree Search (MCTS) AI player with multiple difficulty levels.
-
-### Quick Start
-
-```rust
-use othello::{Game, PlayerTrait};
-use othello::MCTSPlayer;
-
-let game = Game::new();
-let player = MCTSPlayer::medium();  // Medium difficulty
-let move_opt = player.choose_move(&game);
-```
-
-### Difficulty Levels
-
-The MCTS player provides four preset difficulty levels:
-
-- **Easy** (`MCTSPlayer::easy()`) - 200 iterations, ~200-500ms per move
-  - Higher exploration for more varied play
-  - No heuristics (pure random simulation)
-  - Good for quick games or beginners
-
-- **Medium** (`MCTSPlayer::medium()`) - 1000 iterations, ~1-3s per move
-  - Balanced settings with heuristics enabled
-  - Recommended for most games
-
-- **Hard** (`MCTSPlayer::hard()`) - 3000 iterations, ~3-10s per move
-  - Strong play suitable for experienced players
-  - Heuristics enabled for better simulation quality
-
-- **Expert** (`MCTSPlayer::expert()`) - 10000 iterations, ~10-30s per move (capped at 5s)
-  - Very strong play for expert-level competition
-  - Lower exploration for focused exploitation
-  - Time limit prevents excessively long moves
-
-### Custom Configuration
-
-You can also create custom MCTS players with fine-tuned parameters:
-
-```rust
-use othello::MCTSPlayer;
-
-let player = MCTSPlayer::with_iterations("Custom AI", 2000)
-    .with_exploration(1.5)      // Exploration constant (default: √2 ≈ 1.414)
-    .with_time_limit_ms(3000)   // Maximum time per move
-    .with_heuristics(true);     // Enable heuristic-guided simulation
-```
-
-### How MCTS Works
-
-MCTS builds a search tree by repeatedly performing four phases:
-
-1. **Selection**: Traverse from root to leaf using UCB1 (Upper Confidence Bound)
-2. **Expansion**: Add children to the selected leaf node
-3. **Simulation**: Play a random/heuristic-guided game to completion
-4. **Backpropagation**: Update statistics (visits and win rate) up the tree
-
-After many iterations, the move from the most-visited child is selected. The algorithm balances exploration (trying new moves) with exploitation (choosing promising moves).
-
-### Heuristics
-
-When enabled, the MCTS player uses Othello-specific heuristics to improve simulation quality:
-
-- **Corner heuristic**: Prioritizes corner positions (very valuable) and avoids adjacent squares (risky)
-- **Mobility heuristic**: Prefers moves that maximize future move options
-- **Stability heuristic**: Favors edge pieces which are harder to flip
-
-### Performance Tips
-
-- **Iterations**: More iterations generally lead to better moves but take longer (diminishing returns after ~5000)
-- **Time limits**: Use `with_time_limit_ms()` to cap move time for responsive gameplay
-- **Heuristics**: Enable heuristics to improve simulation quality and move selection
-- **Exploration constant**: Lower values (1.0-1.2) favor exploitation, higher values (2.0+) favor exploration
-
-For library usage, see the [`mcts` module documentation](https://docs.rs/othello/latest/othello/mcts/index.html).
-
-## Project Structure
-
-```
-src/
-├── main.rs          # Entry point and game loop
-├── lib.rs           # Library root with module declarations
-├── board.rs         # Board representation and operations
-├── rules.rs         # Game rules and move validation
-├── game.rs          # Game state management
-├── player.rs        # Player trait definition
-├── human_player.rs  # Human player implementation
-├── ai_player.rs     # AI player implementation (random)
-├── display.rs       # Console rendering
-├── error.rs         # Error types
-└── mcts/            # Monte Carlo Tree Search AI
-    ├── mod.rs       # Module declarations
-    ├── node.rs      # MCTS tree node implementation
-    ├── player.rs    # MCTS player implementation
-    └── heuristics.rs # Move evaluation heuristics
-```
-
-## UI Features
-
-The game features an enhanced terminal interface:
-
-- **Colors**: Automatic color detection (disabled if `NO_COLOR` environment variable is set)
-- **Piece Display**: 
-  - `●` Black pieces (bright black/gray)
-  - `○` White pieces (bright white)
-  - `•` Valid moves (bright green)
-  - `·` Empty spaces (dim gray)
-- **Board Layout**: Clean borders with Unicode box-drawing characters
-- **Information Display**: Color-coded scores, current player, and valid moves
-
-## Future Enhancements
-
-- Alpha-beta pruning for alternative AI approach
-- Tree reuse between moves (advanced MCTS optimization)
-- Parallel MCTS (multi-threaded search)
-- Move history/replay
-- Save/load game state
-- Undo/redo functionality
-- Network multiplayer
-
-## License
-
-This project is open source and available for educational purposes.
-
+[^4]: I refuse to say “vibe coding”.  You need to know your problem domain and be able to at least read the language being generated.  You need to review what has been generated at each stage and assume there will be mistakes.  This includes reviewing all code changes using your VCS (Version Control System) before committing them.  If this had been a professional coding project, I would not have relied only on Cursor’s unit tests, but
+I would have written my own unit tests for the chosen min-max A/B pruning implementation.  AI tools are not a magic Genie to be summoned to grant the user’s wishes.  Rather, they are a force multiplier for developers to produce code more rapidly in partnership with the AI.
