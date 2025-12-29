@@ -24,14 +24,14 @@ impl PlayerType {
         vec![
             PlayerType::Human,
             PlayerType::AIRandom,
-            PlayerType::MCTSEasy,
-            PlayerType::MCTSMedium,
-            PlayerType::MCTSHard,
-            PlayerType::MCTSExpert,
             PlayerType::MinimaxEasy,
             PlayerType::MinimaxMedium,
             PlayerType::MinimaxHard,
             PlayerType::MinimaxExpert,
+            PlayerType::MCTSEasy,
+            PlayerType::MCTSMedium,
+            PlayerType::MCTSHard,
+            PlayerType::MCTSExpert,
         ]
     }
     
