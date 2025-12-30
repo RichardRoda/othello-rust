@@ -1,4 +1,4 @@
-TL;DR: I just want to run it.
+#### TL;DR: I just want to run it.
 
 ```sh
 cargo run --release --bin othello
