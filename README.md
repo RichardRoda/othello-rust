@@ -78,3 +78,5 @@ The cursor generated documentation for the game may be found in [ABOUT-GAME.md](
 can be bound to additional values (such as Some, which is bound with its value).  Such enum values are obviously not singletons.
 
 [^3]: The A/B pruning sounds fancy, but it is simple: Once the game finds a winning move (that is, a move that for all possible opponent moves a countermove exists that leads to a winning state), it stops traversing the move tree for any sibling moves and returns that move.  Once you have a winning move, evaluating any other moves is pointless.
+
+## License: [Apache-2.0](LICENSE.md)

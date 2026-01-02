@@ -202,6 +202,4 @@ The game features an enhanced terminal interface:
 - Undo/redo functionality
 - Network multiplayer
 
-## License
-
-This project is open source and available for educational purposes.
+## License: [Apache-2.0](LICENSE.md)
