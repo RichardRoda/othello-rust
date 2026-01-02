@@ -7,8 +7,7 @@ Use up/down arrow keys and enter to select player.  Use the mouse to make moves.
 
 # Othello Game in Rust: A Journey With Cursor
 
-I was able to implement this in about a day and a half using a language (Rust) with which I have a beginner's level of knowledge.  The intent of this is to demonstrate what can be done with Cursor
-in about a day to 1.5 days effort. [^1]
+I was able to implement this in about a day and a half using a language (Rust) with which I have a beginner's level of knowledge.  I used the Cursor Pro plan trial period.  The intent of this is to demonstrate what can be done with Cursor in about a day to 1.5 days effort. [^1]
 
 Why Othello?  A long time ago, in a galaxy far, far away… I was a TA (Teacher’s Assistant) for a
 101-level C++ programming class.  The class project was to make an Othello game playable with two
