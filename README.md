@@ -31,7 +31,7 @@ read but would have difficulty writing it in.
 After a few false starts, the implementation strategy I found that worked best for this kind of project is to request a
 design or implementation document, review it, make changes (or ask Cursor to make changes to it).  Once the document is
 sound, then in a new session request Cursor to implement the design or implementation document.  The “new session” is important.
-By breaking apart the design and implementation execution into separate steps, token exhaustion is
+By breaking apart the design and implementation execution into separate steps, [token exhaustion](https://www.getmonetizely.com/articles/token-fatigue-why-ai-users-are-tired-of-thinking-in-tokens) is
 avoided.  Other benefits are the ability to review and update the design before it’s executed, and having the documentation
 for reference.
 
