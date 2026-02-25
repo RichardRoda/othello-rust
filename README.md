@@ -58,7 +58,8 @@ I left the MCTS in as a reference so you can see the difference in the performan
 
 ## Takeaways:
 
-* The iterative [Spec-anchored development](https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html) workflow [^4] works well and minimizes surprises.  You also have up-to-date documentation for what you built.   
+* The iterative [Spec-anchored development](https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html) workflow [^4] works well and minimizes surprises.  You also have up-to-date documentation for what you built.  
+* The specification anchored development resembles the [Waterfall Model](https://en.wikipedia.org/wiki/Waterfall_model), but at [Ludicrous Speed](https://www.youtube.com/watch?v=NAWL8ejf2nM).  Although the steps replicate the waterfall model, with each document feeding the next one until the code is written and then unit tested, the waterfall iterations are so fast that they are useful in an Agile Sprint methodology.  Although the *process* is waterfall, the *result* is agile.
 * Use feature branches for new features. That way, if things go off the rails, it is easy to get back to the good code
 that is in the main or master branch.  In a corporate setting, this is likely how it is already done.
 * The Good: It’s OK to try different approaches.  The rapid prototyping capability of AI-assisted development makes choosing
