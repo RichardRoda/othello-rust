@@ -58,7 +58,7 @@ I left the MCTS in as a reference so you can see the difference in the performan
 
 ## Takeaways:
 
-* The iterative [Spec-anchored development](https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html) workflow [^4] works well and minimizes surprises.  You also have up-to-date documentation for what you built.  
+* The iterative [Spec-anchored development](https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html) workflow [^4] works well and minimizes surprises.  You also have up-to-date documentation for what you built.  The kept specifications serve as a kind of "memory" for the LLM.  When it can find ("remember") things in a specification, it uses less tokens then when it has to analyze the code base.
 * The specification anchored development resembles the [Waterfall Model](https://en.wikipedia.org/wiki/Waterfall_model), but at [Ludicrous Speed](https://www.youtube.com/watch?v=NAWL8ejf2nM).  Although the steps replicate the waterfall model, with each document feeding the next one until the code is written and then unit tested, the waterfall iterations are so fast that they are useful in an Agile Sprint methodology.  Although the *process* is waterfall, the *result* is agile.
 * *Everything* is code.  The line between code and documentation is gone.  Cursor reads and executes the documentation when preforming its tasks.  It is more important that ever to have up to date and accurate documentation.
 * Use feature branches for new features. That way, if things go off the rails, it is easy to get back to the good code
